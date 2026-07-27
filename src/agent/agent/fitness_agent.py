@@ -15,7 +15,7 @@ from langchain.agents import create_agent
 from loguru import logger
 
 from agent.backend.prompts import get_system_prompt
-from agent.tools import analyze_progress_tool, query_workout_tool, rag_search_tool
+from agent.tools import analyze_progress_tool, query_workout_tool, rag_search_tool, recall_memories_tool
 from agent.utils.config import Config
 
 
@@ -66,6 +66,7 @@ def build_fitness_agent(cfg: Config | None = None) -> object:
         query_workout_tool,
         analyze_progress_tool,
         rag_search_tool,
+        recall_memories_tool,
     ]
 
     # 内存检查点：保存对话历史，支持多轮对话的上下文记忆

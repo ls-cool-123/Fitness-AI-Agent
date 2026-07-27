@@ -15,7 +15,7 @@ class Config(BaseSettings):
     gemini_api_key: str = ""
     deepseek_api_key: str = ""
     deepseek_api_base: str = "https://api.deepseek.com"
-    deepseek_model_name: str = "deepseek-chat"
+    deepseek_model_name: str = "deepseek-v4-flash"
     qwen_api_key: str = ""
     dashscope_api_key: str = ""
     qwen_embedding_api_base: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -37,7 +37,7 @@ class Config(BaseSettings):
     fitness_collection_name: str = "fitness_kb"
 
     # Reranker Configuration
-    rerank_provider: str = "flashrank"  # "flashrank" or "none"
+    rerank_provider: str = "bge"  # "bge" / "flashrank" / "none"
     rerank_top_k: int = 5
 
     # Retrieval Configuration
@@ -51,6 +51,12 @@ class Config(BaseSettings):
     qdrant_prefer_grpc: bool = False
     phoenix_collector_endpoint: str = "http://phoenix:4318/v1/traces"
     qdrant_collection_name: str = "default"
+
+    # Long-term Memory
+    memory_collection_name: str = "user_memories"
+    memory_importance_threshold: float = 0.6
+    memory_half_life_days: int = 30
+    memory_max_per_extraction: int = 5
 
 
 config = Config()

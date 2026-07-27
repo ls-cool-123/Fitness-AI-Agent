@@ -1,4 +1,10 @@
-"""Reranker utilities for document reranking."""
+"""Reranker utilities for document reranking.
+
+Supported providers:
+  - "bge"       : BGE-reranker-v2-m3 (BAAI, 多语言, 免费, 本地)
+  - "flashrank" : ms-marco-MiniLM-L-12-v2 (英文 only, 免费, 本地)
+  - "none"      : passthrough (no reranking)
+"""
 
 from typing import TYPE_CHECKING, Literal
 
@@ -8,9 +14,58 @@ from loguru import logger
 if TYPE_CHECKING:
     from flashrank import Ranker
 
-RerankerProvider = Literal["flashrank", "none"]
+RerankerProvider = Literal["bge", "flashrank", "none"]
 
-# Cache for FlashRank model (expensive to load)
+# ── BGE Reranker (多语言, 中文友好) ────────────────────────────────────
+
+_bge_ranker = None  # sentence_transformers CrossEncoder
+
+
+def _get_bge_ranker():
+    """Get or create cached BGE reranker via sentence-transformers CrossEncoder."""
+    global _bge_ranker
+    if _bge_ranker is None:
+        from sentence_transformers import CrossEncoder  # noqa: PLC0415
+
+        _bge_ranker = CrossEncoder(
+            "BAAI/bge-reranker-v2-m3",
+        )
+        logger.info("BGE-reranker-v2-m3 model loaded and cached")
+    return _bge_ranker
+
+
+def rerank_with_bge(documents: list[Document], query: str, top_k: int) -> list[Document]:
+    """Rerank using BGE-reranker-v2-m3 (multilingual cross-encoder).
+
+    BGE 将 query 和每个 doc 拼接成 [query, doc] pair，用 CrossEncoder
+    做二分类打分（相关/不相关）。
+    """
+    if not documents:
+        return documents
+
+    ranker = _get_bge_ranker()
+
+    # 构建 (query, doc) pair 列表
+    pairs = [[query, doc.page_content] for doc in documents]
+
+    # CrossEncoder.predict 返回每个 pair 的相关度分数
+    scores = ranker.predict(pairs, show_progress_bar=False)
+
+    # score 可能是 float（单条）或 list（多条）
+    if not hasattr(scores, "__iter__"):
+        scores = [scores]
+
+    # 按分数降序排列，取 top_k
+    ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k]
+
+    reranked_docs = [documents[idx] for idx, _ in ranked]
+
+    logger.info(f"BGE reranked {len(documents)} documents to top {len(reranked_docs)}")
+    return reranked_docs
+
+
+# ── FlashRank Reranker (英文 only, 保留作为对比基线) ──────────────────
+
 _flashrank_ranker: "Ranker | None" = None
 
 
@@ -26,17 +81,7 @@ def _get_flashrank_ranker() -> "Ranker":
 
 
 def rerank_with_flashrank(documents: list[Document], query: str, top_k: int) -> list[Document]:
-    """Rerank documents using FlashRank (local model).
-
-    Args:
-        documents: List of documents to rerank.
-        query: The query to rerank against.
-        top_k: Number of top documents to return.
-
-    Returns:
-        Reranked list of documents.
-
-    """
+    """Rerank documents using FlashRank (local model, English only)."""
     from flashrank import RerankRequest  # noqa: PLC0415
 
     if not documents:
@@ -44,23 +89,22 @@ def rerank_with_flashrank(documents: list[Document], query: str, top_k: int) -> 
 
     ranker = _get_flashrank_ranker()
 
-    # Convert documents to flashrank format
     passages = [{"id": i, "text": doc.page_content, "meta": doc.metadata} for i, doc in enumerate(documents)]
 
     rerank_request = RerankRequest(query=query, passages=passages)
     results = ranker.rerank(rerank_request)
 
-    # Sort by score and take top_k
     sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)[:top_k]
 
-    # Reconstruct documents preserving original metadata
     reranked_docs = []
     for result in sorted_results:
-        original_idx = result["id"]
-        reranked_docs.append(documents[original_idx])
+        reranked_docs.append(documents[result["id"]])
 
     logger.info(f"FlashRank reranked {len(documents)} documents to top {len(reranked_docs)}")
     return reranked_docs
+
+
+# ── Factory ────────────────────────────────────────────────────────────
 
 
 def get_reranker(
@@ -70,7 +114,7 @@ def get_reranker(
     """Get a reranker function based on the provider.
 
     Args:
-        provider: The reranker provider to use ("flashrank" or "none").
+        provider: "bge" / "flashrank" / "none"
         top_k: Number of top documents to return after reranking.
 
     Returns:
@@ -83,9 +127,11 @@ def get_reranker(
             return lambda docs, _: docs[:top_k] if len(docs) > top_k else docs
 
         case "flashrank":
-            # Pre-warm the model on startup
             _get_flashrank_ranker()
             return lambda docs, query: rerank_with_flashrank(docs, query, top_k)
+
+        case "bge":
+            return lambda docs, query: rerank_with_bge(docs, query, top_k)
 
         case _:
             msg = f"Unknown reranker provider: {provider}"

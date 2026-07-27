@@ -13,20 +13,58 @@
 
 import warnings
 
+import jieba
 from langchain_core.embeddings import Embeddings
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
+from langchain_qdrant.sparse_embeddings import SparseVector
 from loguru import logger
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from agent.utils.config import Config
+
+
+# ============================================================
+# 中文分词 BM25 稀疏嵌入 —— jieba 预处理 + FastEmbedSparse
+# ============================================================
+
+class JiebaBM25Sparse:
+    """中文感知的 BM25 稀疏嵌入包装器。
+
+    FastEmbedSparse (Qdrant/bm25) 底层使用空格分词，中文没有空格，
+    整句被当成一个 token 导致完全无法匹配。
+
+    本包装器在调用 BM25 前先用 jieba 将中文切分为空格分隔的词序列，
+    英文/数字直接保留原样，从而让 BM25 能对中文做正确的关键词匹配。
+    """
+
+    def __init__(self, model_name: str = "Qdrant/bm25"):
+        self._inner = FastEmbedSparse(model_name=model_name)
+
+    @staticmethod
+    def _segment(text: str) -> str:
+        """对中文做分词后用空格连接，英文/数字原样保留。"""
+        return " ".join(jieba.cut(text))
+
+    def embed_query(self, text: str) -> SparseVector:
+        """对单条查询做分词 → BM25 稀疏向量。"""
+        return self._inner.embed_query(self._segment(text))
+
+    def embed_documents(self, texts: list[str]) -> list[SparseVector]:
+        """对多篇文档做分词 → BM25 稀疏向量列表。"""
+        return self._inner.embed_documents([self._segment(t) for t in texts])
+
+    def embed_text(self, text: str) -> SparseVector:
+        """别名——对单条文本分词后生成稀疏向量。"""
+        return self._inner.embed_query(self._segment(text))
+
 
 # ============================================================
 # 模块级单例：在 import 时初始化，整个应用生命周期内复用
 # ============================================================
 
 # BM25 稀疏嵌入模型 —— 用于混合检索中的关键词匹配
-# FastEmbedSparse 是 Qdrant 的快速稀疏向量生成器，模型名为 "Qdrant/bm25"
-sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
+# 使用 jieba 预处理中文文本，解决 FastEmbedSparse 对中文无效的问题
+sparse_embeddings = JiebaBM25Sparse(model_name="Qdrant/bm25")
 
 # 从配置中读取 Qdrant 连接参数
 settings = Config()
@@ -230,3 +268,8 @@ def initialize_all_vector_dbs(config: Config) -> None:
             collection_name=config.fitness_collection_name,
             embeddings_size=config.embedding_size,
         )
+    # 初始化用户长期记忆集合
+    initialize_vector_db(
+        collection_name=config.memory_collection_name,
+        embeddings_size=config.embedding_size,
+    )

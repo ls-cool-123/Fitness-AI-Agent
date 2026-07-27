@@ -5,6 +5,7 @@
 - POST /chat/stream : 流式问答，实时推送工具调用状态和生成内容。
 """
 
+import asyncio
 import json
 from collections.abc import AsyncGenerator
 
@@ -15,6 +16,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from agent.agent.fitness_agent import fitness_agent
+from agent.memory import extract_and_store_memories
 from agent.tools import current_user_id
 
 router = APIRouter()
@@ -95,6 +97,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
     # 提取最后一条 AI 消息作为回答
     final_message = result["messages"][-1]
     answer = final_message.content if hasattr(final_message, "content") else str(final_message)
+
+    # 异步提取长期记忆（fire-and-forget，不阻塞响应）
+    asyncio.create_task(
+        extract_and_store_memories(
+            user_id=request.user_id,
+            langchain_messages=langchain_messages,
+        )
+    )
 
     logger.info(f"Chat response: {answer[:100]}...")
     return ChatResponse(answer=answer)
@@ -199,5 +209,13 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
         # 阶段 5: 流结束信号
         yield json.dumps({"type": "status", "data": "完成"}, ensure_ascii=False) + "\n"
+
+        # 异步提取长期记忆（fire-and-forget，不阻塞响应）
+        asyncio.create_task(
+            extract_and_store_memories(
+                user_id=request.user_id,
+                langchain_messages=langchain_messages,
+            )
+        )
 
     return StreamingResponse(stream(), media_type="application/x-ndjson")

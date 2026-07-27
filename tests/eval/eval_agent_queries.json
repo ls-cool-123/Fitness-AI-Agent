@@ -1,0 +1,92 @@
+[
+  {
+    "query": "我上周练了什么",
+    "expected_tools": ["query_workout_tool"],
+    "difficulty": "easy",
+    "note": "明确查历史"
+  },
+  {
+    "query": "最近有没有练深蹲",
+    "expected_tools": ["query_workout_tool"],
+    "difficulty": "easy",
+    "note": "按动作名查历史"
+  },
+  {
+    "query": "这一个月卧推的数据",
+    "expected_tools": ["query_workout_tool"],
+    "difficulty": "easy",
+    "note": "按动作名+时间查历史"
+  },
+  {
+    "query": "我的深蹲重量最近有进步吗",
+    "expected_tools": ["analyze_progress_tool"],
+    "difficulty": "easy",
+    "note": "明确问进展——需要趋势分析"
+  },
+  {
+    "query": "分析一下我的训练进展",
+    "expected_tools": ["analyze_progress_tool"],
+    "difficulty": "easy",
+    "note": "直接要求分析"
+  },
+  {
+    "query": "卧推有没有变强",
+    "expected_tools": ["analyze_progress_tool"],
+    "difficulty": "easy",
+    "note": "问力量变化趋势"
+  },
+  {
+    "query": "硬拉的时候腰疼怎么办",
+    "expected_tools": ["rag_search_tool"],
+    "difficulty": "easy",
+    "note": "动作技巧/伤病——知识库"
+  },
+  {
+    "query": "减脂期蛋白质应该吃多少",
+    "expected_tools": ["rag_search_tool"],
+    "difficulty": "easy",
+    "note": "营养知识——知识库"
+  },
+  {
+    "query": "增肌训练每组应该做几次最有效",
+    "expected_tools": ["rag_search_tool"],
+    "difficulty": "easy",
+    "note": "训练理论——知识库"
+  },
+  {
+    "query": "如何避免深蹲时膝盖内扣",
+    "expected_tools": ["rag_search_tool"],
+    "difficulty": "easy",
+    "note": "动作纠正——知识库"
+  },
+  {
+    "query": "最近一个月深蹲练了多少，有什么方法可以继续提高",
+    "expected_tools": ["query_workout_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "查历史 + 要建议——需要两个工具"
+  },
+  {
+    "query": "分析下我的训练情况，然后给我一些饮食建议",
+    "expected_tools": ["analyze_progress_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "分析进展 + 饮食知识——需要两个工具"
+  },
+  {
+    "query": "最近练了什么，感觉进步不明显怎么办",
+    "expected_tools": ["query_workout_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "查记录 + 突破方法"
+  },
+  {
+    "query": "深蹲目前水平如何，怎么突破平台期",
+    "expected_tools": ["analyze_progress_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "分析特定动作 + 方法"
+  },
+  {
+    "query": "你好",
+    "expected_tools": [],
+    "difficulty": "tricky",
+    "note": "闲聊——不需要调任何工具"
+  }
+]

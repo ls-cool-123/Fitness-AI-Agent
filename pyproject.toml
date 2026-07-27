@@ -37,6 +37,8 @@ dependencies = [
     "aiomysql>=0.2.0",
     "alembic>=1.14.0",
     "pandas>=2.0.0",
+    "jieba>=0.42.1",
+    "flagembedding>=1.4.0",
 ]
 
 

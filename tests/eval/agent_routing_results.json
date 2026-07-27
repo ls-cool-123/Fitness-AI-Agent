@@ -1,0 +1,208 @@
+{
+  "summary": {
+    "total": 15,
+    "correct": 7,
+    "accuracy": 0.4666666666666667,
+    "partial": 8,
+    "false_negative": 0,
+    "false_positive": 10,
+    "easy_accuracy": 0.6,
+    "hard_coverage": 1.0
+  },
+  "details": [
+    {
+      "query": "我上周练了什么",
+      "expected": [
+        "query_workout_tool"
+      ],
+      "actual": [
+        "query_workout_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "好的，我来查一下你上周的训练记录！\n\n今天是2026年7月3日（星期五），上周是6月28日（星期一）到7月4日（星期日），我先查最近7天的数据。看起来我暂时没有获取到你的 **user_id** 信息，所以查询结果为空。😅\n\n不过别担心！请你告诉我你的 **用户ID（user_id）**，或者如果你",
+      "elapsed_s": 4.0
+    },
+    {
+      "query": "最近有没有练深蹲",
+      "expected": [
+        "query_workout_tool"
+      ],
+      "actual": [
+        "query_workout_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "好的！我来查一下你最近的深蹲训练记录 📊看起来在 **最近30天** 内，系统里没有你的深蹲训练记录 😅\n\n为了帮你进一步分析，我们可以看看几个方面：\n\n### 🔍 我们来查查：\n1. **深蹲更久之前的记录** — 要不要我查一下过去60天或90天的数据？\n2. **其他动作的训练情况** — 或",
+      "elapsed_s": 4.7
+    },
+    {
+      "query": "这一个月卧推的数据",
+      "expected": [
+        "query_workout_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'analyze_progress_tool'})",
+      "answer_preview": "我来查一下你最近一个月的卧推训练数据！让我再帮你分析一下卧推的进展趋势！好的，来看看你最近一个月 **卧推** 的数据 👇\n\n---\n\n### 📅 训练记录一览（近30天）\n\n| 日期 | 组数 | 总次数 | 各组详情 |\n|:---:|:---:|:---:|:---|\n| **6月17日** ",
+      "elapsed_s": 9.1
+    },
+    {
+      "query": "我的深蹲重量最近有进步吗",
+      "expected": [
+        "analyze_progress_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'query_workout_tool'})",
+      "answer_preview": "我来查一下你的深蹲训练进展！嗯，看起来在过去 **90天（从2026年4月初到现在）** 的系统记录中，没有找到你的深蹲训练数据 😅\n\n这可能有两种情况：\n\n1️⃣ **你最近没有记录深蹲训练** — 如果实际有练但没记，记得用右侧侧边栏的 **\"快速记录训练\"** 功能把数据录进去，这样我才能帮你",
+      "elapsed_s": 8.7
+    },
+    {
+      "query": "分析一下我的训练进展",
+      "expected": [
+        "analyze_progress_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'query_workout_tool', 'rag_search_tool'})",
+      "answer_preview": "好的！我来分析你的训练进展。先调用工具看看你的整体表现。看起来返回的是整体汇总数据，我来进一步查一下你具体的训练记录，看看都练了哪些动作。让我再查查各部位的详细分析，以及获取一些专业建议。好的，数据全部拉回来了！下面给你做一份详细的 **训练进展分析报告** 🔍\n\n---\n\n## 📊 你的训练进展分",
+      "elapsed_s": 51.7
+    },
+    {
+      "query": "卧推有没有变强",
+      "expected": [
+        "analyze_progress_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'query_workout_tool', 'rag_search_tool'})",
+      "answer_preview": "我来帮你查查卧推的进展！先看看你的训练数据。让我再搜一下关于卧推进步的训练知识，给你一些针对性建议。好的，数据已经出来了，我来帮你详细分析一下！💪\n\n---\n\n## 📊 卧推进展分析\n\n### 总体趋势：⚠️ 近期有所下降\n\n| 指标 | 数据 | 解读 |\n|------|------|-----",
+      "elapsed_s": 30.7
+    },
+    {
+      "query": "硬拉的时候腰疼怎么办",
+      "expected": [
+        "rag_search_tool"
+      ],
+      "actual": [
+        "rag_search_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "先别急，硬拉时腰部疼痛是一个很常见的问题，但需要认真对待！我来帮你查一下相关的科学建议和注意事项。好的，我查阅了相关资料，来帮你分析一下硬拉腰疼的原因和解决办法。这个问题很常见，但绝不能忽视！\n\n---\n\n## 🚨 硬拉腰疼最常见的原因\n\n根据健身知识库的内容，**弯腰塌腰（腰部代偿）** 是导致硬",
+      "elapsed_s": 31.7
+    },
+    {
+      "query": "减脂期蛋白质应该吃多少",
+      "expected": [
+        "rag_search_tool"
+      ],
+      "actual": [
+        "rag_search_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "好问题！减脂期蛋白质摄入非常关键，我来帮你查一下科学建议。以下是减脂期蛋白质摄入的 **科学建议** 👇\n\n---\n\n## 🥩 减脂期蛋白质摄入标准\n\n### 推荐量：**每公斤体重 1.6g ~ 2.0g / 每天**\n\n也就是说，你需要根据**当前体重（kg）**计算：\n\n> **蛋白质（克） ",
+      "elapsed_s": 26.8
+    },
+    {
+      "query": "增肌训练每组应该做几次最有效",
+      "expected": [
+        "rag_search_tool"
+      ],
+      "actual": [
+        "rag_search_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "这个问题问得好！关于增肌的最佳每组次数范围，让我查一下科学依据。让我再搜一些更清晰的资料来给你更准确的答案。好的，结合我搜索到的科学资料，来给你详细解答一下这个问题！👇\n\n---\n\n## 📊 增肌（肌肥大）的最佳每组次数\n\n**核心结论：每组 **8~12 次** 是目前公认的增肌「黄金区间」** ",
+      "elapsed_s": 51.8
+    },
+    {
+      "query": "如何避免深蹲时膝盖内扣",
+      "expected": [
+        "rag_search_tool"
+      ],
+      "actual": [
+        "rag_search_tool"
+      ],
+      "verdict": "OK",
+      "answer_preview": "这是一个非常好的问题！膝盖内扣（Knee Valgus）是深蹲时最常见的技术错误之一，我来帮你找一些科学依据和解决方案。## 🏋️ 深蹲膝盖内扣 — 原因分析与纠正方案\n\n膝盖内扣（专业术语叫 **Knee Valgus**）是深蹲时极常见的问题，不仅会**磨损膝关节**，还会让**发力链条断裂，重",
+      "elapsed_s": 33.4
+    },
+    {
+      "query": "最近一个月深蹲练了多少，有什么方法可以继续提高",
+      "expected": [
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'analyze_progress_tool'})",
+      "answer_preview": "好的，我先查一下你最近一个月的深蹲训练记录，同时搜索一下深蹲提高的训练方法！好的，我来为你综合汇报一下结果！👇\n\n---\n\n## 📊 你的深蹲训练情况\n\n根据系统查询，**最近 30 天（以及过去 90 天）都没有找到深蹲的训练记录**。目前你的深蹲数据还是空白状态。\n\n不过别担心！这正好是一个**",
+      "elapsed_s": 30.4
+    },
+    {
+      "query": "分析下我的训练情况，然后给我一些饮食建议",
+      "expected": [
+        "analyze_progress_tool",
+        "rag_search_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'query_workout_tool'})",
+      "answer_preview": "好的！我先查一下你的训练数据，然后结合知识库给你饮食建议！看起来你的训练数据只有近期的几条记录。让我再搜索一下关于饮食和营养方面的知识，给你更有针对性的建议！好的，我综合分析完你的训练数据和知识库内容了，下面是完整报告 👇\n\n---\n\n## 📊 你的训练数据分析（近3个月）\n\n| 指标 | 数据 |",
+      "elapsed_s": 31.1
+    },
+    {
+      "query": "最近练了什么，感觉进步不明显怎么办",
+      "expected": [
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'analyze_progress_tool'})",
+      "answer_preview": "让我先看看你最近的训练记录，同时分析一下你的整体进展！我再帮你查一下健身知识，看看怎么突破瓶颈期！好的，我已经看到了你的训练数据和知识库信息，来给你做个详细分析！👇\n\n---\n\n## 📊 你的训练数据一览\n\n我查到了最近 **30天** 的训练记录：\n\n| 日期 | 动作 | 详情 |\n|-----",
+      "elapsed_s": 33.3
+    },
+    {
+      "query": "深蹲目前水平如何，怎么突破平台期",
+      "expected": [
+        "analyze_progress_tool",
+        "rag_search_tool"
+      ],
+      "actual": [
+        "analyze_progress_tool",
+        "query_workout_tool",
+        "rag_search_tool"
+      ],
+      "verdict": "PARTIAL (missing=set(), extra={'query_workout_tool'})",
+      "answer_preview": "我来帮你分析深蹲的进展！先查询一下你的训练记录和进展数据。看起来系统里目前还没有你近90天的深蹲训练记录。不过没关系，关于突破深蹲平台期，我依然可以给你非常专业的建议！同时我也建议你开始在右侧侧边栏使用「快速记录训练」功能，这样以后我就能基于你的真实数据来做针对性分析了。\n\n下面先给你一份**科学突",
+      "elapsed_s": 32.1
+    },
+    {
+      "query": "你好",
+      "expected": [],
+      "actual": [],
+      "verdict": "OK",
+      "answer_preview": "你好！👋 我是你的专属健身教练 AI 助手！\n\n很高兴见到你！在这里，我可以帮你做这些事情：\n\n🏋️ **查询训练记录** — 想知道最近练了什么？随时问我！\n📊 **分析训练进展** — 深蹲进步了吗？背练得够不够？数据说话！\n📚 **健身知识检索** — 动作要领、营养补剂、恢复方法…科学知识库",
+      "elapsed_s": 2.8
+    }
+  ]
+}

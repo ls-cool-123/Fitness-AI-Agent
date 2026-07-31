@@ -40,6 +40,55 @@ class ChatResponse(BaseModel):
     answer: str = Field(description="Agent 的最终回答文本")
 
 
+def _to_langchain_messages(messages: list[ChatMessage]) -> list[AnyMessage]:
+    """将前端消息格式转换为 LangChain 标准消息格式。"""
+    converted: list[AnyMessage] = []
+    for msg in messages:
+        if msg.role == "user":
+            converted.append(HumanMessage(content=msg.content))
+        elif msg.role == "assistant":
+            converted.append(AIMessage(content=msg.content))
+    return converted
+
+
+async def _build_agent_input(request: ChatRequest) -> list[AnyMessage]:
+    """构建本轮要交给 Agent 的**增量**消息。
+
+    对话历史的所有权归 checkpointer（MemorySaver），而非前端。前端每轮都会
+    重发全量历史，若原样转发，这些消息因为不带 id 会被 add_messages 分配新
+    UUID，与 checkpointer 中已有的消息匹配不上，从而被当作新消息追加——消息
+    数会按 O(N²) 膨胀，同一段对话被重复喂给 LLM 多次。
+
+    因此这里按线程状态分两种情况：
+    - 线程已有历史 → 只追加最新一条用户消息，其余交给 checkpointer。
+    - 线程为空（首轮，或进程重启后 MemorySaver 内存态丢失）→ 用前端历史重建
+      对话，并注入带 user_id 的 SystemMessage。
+
+    Args:
+        request: 聊天请求，含前端维护的全量对话历史。
+
+    Returns:
+        本轮传给 Agent 的消息列表。
+    """
+    config = {"configurable": {"thread_id": request.user_id}}
+    state = await fitness_agent.aget_state(config)
+    thread_is_empty = not state.values.get("messages")
+
+    if not thread_is_empty:
+        # 已有历史：只发最新一条用户消息，避免重复累积
+        latest_user = next(
+            (m for m in reversed(request.messages) if m.role == "user"), None
+        )
+        return [HumanMessage(content=latest_user.content)] if latest_user else []
+
+    # 线程为空：注入 user_id 后用前端历史重建对话
+    system_message = SystemMessage(
+        content=f"当前用户的 user_id 是: {request.user_id}。"
+        f"调用任何工具时都必须使用这个 user_id。"
+    )
+    return [system_message, *_to_langchain_messages(request.messages)]
+
+
 @router.post("", tags=["chat"], summary="Chat with the Fitness AI Agent")
 async def chat(request: ChatRequest) -> ChatResponse:
     """向 Fitness AI Agent 发送消息（非流式）。
@@ -52,26 +101,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     所有工具调用均使用请求中提供的 user_id 进行数据隔离。
     """
-    # 构建 LangChain 消息列表
-    langchain_messages: list[AnyMessage] = []
-    user_messages_count = sum(1 for m in request.messages if m.role == "user")
-
-    # 仅在首轮对话时注入 SystemMessage（含 user_id），
-    # 后续轮次 MemorySaver 已记住，无需重复注入。
-    if user_messages_count <= 1:
-        langchain_messages.append(
-            SystemMessage(
-                content=f"当前用户的 user_id 是: {request.user_id}。"
-                f"调用任何工具时都必须使用这个 user_id。"
-            )
-        )
-
-    # 将前端消息转换为 LangChain 标准消息格式
-    for msg in request.messages:
-        if msg.role == "user":
-            langchain_messages.append(HumanMessage(content=msg.content))
-        elif msg.role == "assistant":
-            langchain_messages.append(AIMessage(content=msg.content))
+    # 构建本轮增量消息（历史由 checkpointer 持有，不重复转发）
+    agent_input = await _build_agent_input(request)
 
     # LangGraph 配置：thread_id = user_id，实现按用户隔离的对话记忆
     config = {
@@ -80,14 +111,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
         }
     }
 
-    logger.info(f"Chat request: user={request.user_id}, messages={len(langchain_messages)}")
+    logger.info(f"Chat request: user={request.user_id}, new_messages={len(agent_input)}")
 
     # 设置上下文变量，强制本次调用内所有工具使用正确的 user_id。
     # 这是防止 LLM 幻觉出其他用户 ID 的安全机制。
     token = current_user_id.set(request.user_id)
     try:
         result = await fitness_agent.ainvoke(
-            {"messages": langchain_messages},
+            {"messages": agent_input},
             config=config,
         )
     finally:
@@ -99,10 +130,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
     answer = final_message.content if hasattr(final_message, "content") else str(final_message)
 
     # 异步提取长期记忆（fire-and-forget，不阻塞响应）
+    # 记忆提取需要完整对话上下文，用前端历史而非本轮增量消息
     asyncio.create_task(
         extract_and_store_memories(
             user_id=request.user_id,
-            langchain_messages=langchain_messages,
+            langchain_messages=_to_langchain_messages(request.messages),
         )
     )
 
@@ -129,21 +161,8 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
     StreamingResponse
         media_type 为 application/x-ndjson 的流式响应。
     """
-    # 构建 LangChain 消息列表（逻辑与 /chat 端点一致）
-    langchain_messages: list[AnyMessage] = []
-    user_messages_count = sum(1 for m in request.messages if m.role == "user")
-    if user_messages_count <= 1:
-        langchain_messages.append(
-            SystemMessage(
-                content=f"当前用户的 user_id 是: {request.user_id}。"
-                f"调用任何工具时都必须使用这个 user_id。"
-            )
-        )
-    for msg in request.messages:
-        if msg.role == "user":
-            langchain_messages.append(HumanMessage(content=msg.content))
-        elif msg.role == "assistant":
-            langchain_messages.append(AIMessage(content=msg.content))
+    # 构建本轮增量消息（逻辑与 /chat 端点一致）
+    agent_input = await _build_agent_input(request)
 
     # LangGraph 配置：thread_id = user_id，实现按用户隔离的对话记忆
     config = {
@@ -165,7 +184,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         token = current_user_id.set(request.user_id)
         try:
             async for event in fitness_agent.astream_events(
-                {"messages": langchain_messages},
+                {"messages": agent_input},
                 config=config,
                 version="v2",  # v2 版本事件更详细，支持 on_tool_start/end 等细粒度事件
             ):
@@ -214,7 +233,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         asyncio.create_task(
             extract_and_store_memories(
                 user_id=request.user_id,
-                langchain_messages=langchain_messages,
+                langchain_messages=_to_langchain_messages(request.messages),
             )
         )
 

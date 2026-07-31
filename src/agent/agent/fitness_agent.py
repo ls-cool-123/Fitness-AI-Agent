@@ -8,10 +8,18 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from langchain_litellm import ChatLiteLLM
 from langchain_openai import ChatOpenAI
+from langchain_core.messages.utils import count_tokens_approximately
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
+from langchain.agents.middleware import (
+    ClearToolUsesEdit,
+    ContextEditingMiddleware,
+    SummarizationMiddleware,
+)
 from loguru import logger
 
 from agent.backend.prompts import get_system_prompt
@@ -19,12 +27,16 @@ from agent.tools import analyze_progress_tool, query_workout_tool, rag_search_to
 from agent.utils.config import Config
 
 
-def _create_llm(cfg: Config) -> ChatOpenAI | ChatLiteLLM:
+def _create_llm(cfg: Config, *, streaming: bool = True) -> ChatOpenAI | ChatLiteLLM:
     """创建 LLM 实例，沿用现有的多模型切换模式。
 
     优先使用 DeepSeek（通过 OpenAI 兼容接口），
     未配置 DeepSeek API Key 时回退到 LiteLLM 统一网关。
-    两种模式均开启流式输出。
+
+    Args:
+        cfg: 应用配置。
+        streaming: 是否开启流式输出。面向用户的回答需要流式（前端逐字渲染），
+            而摘要生成这类内部调用不需要，关掉可省去逐 chunk 组装的开销。
     """
     if cfg.deepseek_api_key:
         # DeepSeek 模式：使用 ChatOpenAI 客户端 + 自定义 base_url
@@ -32,10 +44,15 @@ def _create_llm(cfg: Config) -> ChatOpenAI | ChatLiteLLM:
             model=cfg.deepseek_model_name,
             api_key=cfg.deepseek_api_key,
             base_url=cfg.deepseek_api_base,
-            streaming=True,
+            streaming=streaming,
+            max_tokens=cfg.llm_max_tokens,
         )
     # LiteLLM 回退模式：支持多种模型供应商的统一网关
-    return ChatLiteLLM(model_name=cfg.model_name, streaming=True)
+    return ChatLiteLLM(
+        model_name=cfg.model_name,
+        streaming=streaming,
+        max_tokens=cfg.llm_max_tokens,
+    )
 
 
 def build_fitness_agent(cfg: Config | None = None) -> object:
@@ -72,19 +89,63 @@ def build_fitness_agent(cfg: Config | None = None) -> object:
     # 内存检查点：保存对话历史，支持多轮对话的上下文记忆
     memory = MemorySaver()
 
+    # 上下文窗口管理，两层递进：
+    #
+    # 第一层 ContextEditingMiddleware —— 清理旧的工具输出。
+    # token 大头是工具返回的 JSON（RAG 检索单次就有 2~3K token），而上一轮检索
+    # 到的知识库片段对下一轮问题几乎无价值，属于一次性内容，清掉最划算。
+    # recall_memories_tool 例外：长期记忆里的用户目标和偏好跨轮次持续有效。
+    #
+    # 注意该中间件在 wrap_model_call 中硬编码使用 count_tokens_approximately
+    # 的默认参数（4.0 字符/token，按英文校准），不接受自定义计数器。中文会被
+    # 低估约 2 倍，因此这里的 trigger 按「英文口径」折算，即配置值除以折算比。
+    approx_ratio = 4.0 / cfg.token_chars_per_token
+    context_editing = ContextEditingMiddleware(
+        edits=[
+            ClearToolUsesEdit(
+                trigger=int(cfg.context_clear_tools_trigger / approx_ratio),
+                keep=cfg.context_clear_tools_keep,
+                exclude_tools=("recall_memories_tool",),
+            )
+        ],
+    )
+
+    # 第二层 SummarizationMiddleware —— 兜底摘要。
+    # 它走 before_model，比第一层的 wrap_model_call 更早执行，看到的是未清理的
+    # 消息，所以阈值要设得高一些，避免在第一层足以解决问题时就抢先触发
+    # （摘要要额外花一次 LLM 调用）。
+    # 阈值必须用绝对 token 数：走自定义 base_url 的 ChatOpenAI 拿不到 model
+    # profile，用 ("fraction", x) 会直接抛 ValueError。
+    #
+    # 摘要用独立的非流式实例：中间件内部是一次性 ainvoke 拿完整结果，
+    # 不需要流式；且独立实例让摘要的 token 消耗在 Phoenix trace 里可单独归因，
+    # 不与面向用户的回答混在一起。
+    summarization = SummarizationMiddleware(
+        model=_create_llm(cfg, streaming=False),
+        trigger=("tokens", cfg.context_summarize_trigger),
+        keep=("messages", cfg.context_summarize_keep_messages),
+        token_counter=partial(
+            count_tokens_approximately, chars_per_token=cfg.token_chars_per_token
+        ),
+    )
+
     # 创建 ReAct Agent：
     # - system_prompt 定义 Agent 的行为人设和规则
     # - checkpointer 负责在多轮对话间持久化状态
+    # - middleware 负责控制上下文窗口大小
     agent = create_agent(
         model=llm,
         tools=tools,
         system_prompt=get_system_prompt(),
+        middleware=[summarization, context_editing],
         checkpointer=memory,
     )
 
     logger.info(
         f"Fitness Agent built with {len(tools)} tools, "
-        f"model={cfg.deepseek_model_name if cfg.deepseek_api_key else cfg.model_name}"
+        f"model={cfg.deepseek_model_name if cfg.deepseek_api_key else cfg.model_name}, "
+        f"max_tokens={cfg.llm_max_tokens}, "
+        f"context_window={cfg.model_context_window}"
     )
     return agent
 

@@ -58,5 +58,21 @@ class Config(BaseSettings):
     memory_half_life_days: int = 30
     memory_max_per_extraction: int = 5
 
+    # Context Window Management
+    # 模型上下文窗口大小，换模型时需同步调整
+    model_context_window: int = 65536
+    # 单次回复的输出上限。ReAct 循环中工具调用轮的输出只有几十 token，
+    # 该值实际只在生成最终回答时才可能触碰
+    llm_max_tokens: int = 4096
+    # 近似 token 计数的字符/token 比。默认值 4.0 是按英文调的，
+    # 中文约 1~1.5 字符/token，用默认值会低估约 3 倍
+    token_chars_per_token: float = 2.0
+    # 超过该 token 数时清理旧的工具输出，只保留最近 keep 条
+    context_clear_tools_trigger: int = 20000
+    context_clear_tools_keep: int = 3
+    # 超过该 token 数时对历史做摘要（兜底，会额外消耗一次 LLM 调用）
+    context_summarize_trigger: int = 36000
+    context_summarize_keep_messages: int = 12
+
 
 config = Config()

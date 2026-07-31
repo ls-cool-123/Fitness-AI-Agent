@@ -67,7 +67,8 @@ async def extract_and_store_memories(
             return
 
         # 2. 创建 LLM（复用与 Agent 相同的配置）
-        llm = _create_llm(config)
+        # 非流式：提取和评分都是一次性 ainvoke，不需要逐 token 输出
+        llm = _create_llm(config, streaming=False)
 
         # 3. 提取候选记忆
         candidates = await extract_memories(

@@ -22,7 +22,7 @@ from langchain.agents.middleware import (
 )
 from loguru import logger
 
-from agent.backend.prompts import get_system_prompt
+from agent.backend.prompts import CONTEXT_SUMMARY_PROMPT, get_system_prompt
 from agent.tools import analyze_progress_tool, query_workout_tool, rag_search_tool, recall_memories_tool
 from agent.utils.config import Config
 
@@ -120,10 +120,14 @@ def build_fitness_agent(cfg: Config | None = None) -> object:
     # 摘要用独立的非流式实例：中间件内部是一次性 ainvoke 拿完整结果，
     # 不需要流式；且独立实例让摘要的 token 消耗在 Phoenix trace 里可单独归因，
     # 不与面向用户的回答混在一起。
+    #
+    # summary_prompt 换成健身场景的中文版：内置提示词面向编程 Agent，
+    # 小节设计（文件改动、待办）与本场景不符，且会遗漏伤病限制等关键信息。
     summarization = SummarizationMiddleware(
         model=_create_llm(cfg, streaming=False),
         trigger=("tokens", cfg.context_summarize_trigger),
         keep=("messages", cfg.context_summarize_keep_messages),
+        summary_prompt=CONTEXT_SUMMARY_PROMPT,
         token_counter=partial(
             count_tokens_approximately, chars_per_token=cfg.token_chars_per_token
         ),
@@ -145,7 +149,8 @@ def build_fitness_agent(cfg: Config | None = None) -> object:
         f"Fitness Agent built with {len(tools)} tools, "
         f"model={cfg.deepseek_model_name if cfg.deepseek_api_key else cfg.model_name}, "
         f"max_tokens={cfg.llm_max_tokens}, "
-        f"context_window={cfg.model_context_window}"
+        f"clear_tools_trigger={cfg.context_clear_tools_trigger}, "
+        f"summarize_trigger={cfg.context_summarize_trigger}"
     )
     return agent
 

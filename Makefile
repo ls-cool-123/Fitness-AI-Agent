@@ -1,7 +1,7 @@
 # Makefile
 #
 # Common development shortcuts for this project. These targets wrap the
-# underlying tools (`uv`, `prek`, `pytest`, `docker compose`, and Streamlit)
+# underlying tools (`uv`, `prek`, `pytest`, `docker compose`, and Vite/npm)
 # so contributors can use one consistent command surface.
 
 # Use bash for recipe execution so shell behavior is consistent across targets.
@@ -21,7 +21,7 @@ help:
 	@echo "  make update-vcr-tests - Rewrite VCR recordings"
 	@echo "  make test-e2e       - Run end-to-end tests"
 	@echo "  make start_backend  - Start the FastAPI backend"
-	@echo "  make start_frontend - Start the Streamlit frontend"
+	@echo "  make start_frontend - Start the React dev server (Vite)"
 	@echo "  make start_docker   - Start all docker containers"
 	@echo "  make clean          - Remove build artifacts"
 
@@ -29,7 +29,7 @@ help:
 setup:
 	uv sync
 	prek install
-	cd frontend && uv sync
+	cd frontend && npm ci
 
 # Run the repository's configured formatting, linting, and static checks.
 style:
@@ -58,9 +58,10 @@ test-e2e:
 start_backend:
 	uv run uvicorn src.agent.main:app --reload --port 8001
 
-# Start the Streamlit frontend from the frontend project directory.
+# Start the Vite dev server. It proxies /chat, /workout, /documents to the
+# backend on :8001, so the browser only ever talks to :5173 (same origin).
 start_frontend:
-	cd frontend && uv run streamlit run assistant.py --theme.base="dark"
+	cd frontend && npm run dev
 
 # Start only the vector database service needed by local backend workflows.
 start_vectordb:

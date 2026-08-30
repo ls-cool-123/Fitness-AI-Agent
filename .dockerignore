@@ -1,5 +1,6 @@
 .venv/
-frontend/.venv/
+frontend/node_modules/
+frontend/dist/
 vector_db/
 phoenix_data/
 logs/

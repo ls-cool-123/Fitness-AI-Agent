@@ -21,6 +21,38 @@ from agent.tools import current_user_id
 
 router = APIRouter()
 
+# rag_search_tool 一次返回 5 个 chunk，每个 content 可能上千字。原样推送会让流
+# 膨胀好几倍，而前端的来源卡片只需要够判断相关性的开头部分。
+_RAG_CONTENT_LIMIT = 300
+
+
+def _shrink(tool_name: str, result):
+    """裁剪工具结果中体积过大的字段，供流式推送使用。
+
+    只处理 rag_search_tool 的 content（截断到 300 字符），source/category/score
+    等元数据原样保留。其余工具的结果本身就很小，直接返回。
+
+    Args:
+        tool_name: 工具名称。
+        result: 已解析的工具结果（dict / list / None）。
+
+    Returns:
+        可直接序列化的结果，体积受控。
+    """
+    if tool_name != "rag_search_tool" or not isinstance(result, list):
+        return result
+
+    shrunk = []
+    for chunk in result:
+        if not isinstance(chunk, dict):
+            shrunk.append(chunk)
+            continue
+        content = chunk.get("content")
+        if isinstance(content, str) and len(content) > _RAG_CONTENT_LIMIT:
+            chunk = {**chunk, "content": content[:_RAG_CONTENT_LIMIT] + "..."}
+        shrunk.append(chunk)
+    return shrunk
+
 
 class ChatMessage(BaseModel):
     """单条对话消息，对应 OpenAI 消息格式的子集。"""
@@ -149,7 +181,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
     每行一个 JSON 对象，type 字段区分消息类型：
     - "status"   : 阶段状态（开始分析 → 工具调用中 → 生成回答 → 完成）
     - "content"  : 逐 token 流式返回的回答文本（前端可逐字渲染）
-    - "tool"     : 工具调用详情（工具名、参数、结果预览）
+    - "tool"     : 工具调用详情（工具名、参数、结果预览，以及完整结果 result）
 
     Parameters
     ----------
@@ -207,8 +239,25 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     tool_output = event["data"].get("output", "")
                     # 只传递结果的前 100 个字符作为预览，完整结果由 LLM 处理后输出
                     preview = tool_output[:100] + "..." if isinstance(tool_output, str) and len(tool_output) > 100 else str(tool_output)[:100]
+                    # v2 事件里 output 通常是 ToolMessage 对象而非裸字符串，
+                    # 真正的 JSON 文本在 .content 上。
+                    text = tool_output.content if hasattr(tool_output, "content") else tool_output
+                    try:
+                        result = json.loads(text) if isinstance(text, str) else None
+                    except json.JSONDecodeError:
+                        # 非 JSON 输出（如工具内部异常字符串）不推送结构化结果，
+                        # 前端跳过卡片渲染，LLM 的文字回答本身已覆盖内容。
+                        result = None
                     yield json.dumps(
-                        {"type": "tool", "data": {"tool": name, "output_preview": preview, "status": "end"}},
+                        {
+                            "type": "tool",
+                            "data": {
+                                "tool": name,
+                                "output_preview": preview,
+                                "status": "end",
+                                "result": _shrink(name, result),
+                            },
+                        },
                         ensure_ascii=False,
                     ) + "\n"
 

@@ -148,3 +148,21 @@ mysql_data/
 # Python
 __pycache__/
 *.pyc
+
+# Node / React 前端
+node_modules/
+frontend/dist/
+
+# 模型缓存目录
+fastembed_cache/
+hf_cache/
+
+# Claude 本地设置
+.claude/
+
+# Windows 命令重定向误创建的垃圾文件
+nul
+
+# 评测 / 演示输出日志
+eval_docs.txt
+retrieval_demo.txt

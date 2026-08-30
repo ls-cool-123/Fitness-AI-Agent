@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   图表配色 —— 取自 dataviz 规范已验证的默认配色，hex 与表面色都没有改动。
+   只声明实际用到的角色：趋势线是单序列、部位柱图 7 根柱同色，因此分类色
+   只需要 series-1 一个 slot。
+
+   规范里这些变量挂在 .viz-root 下，是为了让图表能嵌进别人的页面而不污染全局。
+   这里整个 SPA 就是图表宿主，退化成挂在 :root 上——顺带让 getComputedStyle
+   能直接从 documentElement 读到（Recharts 只吃 JS 值，见 lib/palette.ts）。
+
+   浅色值作为基准。深色值在两个作用域各声明一遍：媒体查询覆盖系统设置，
+   data-theme 覆盖用户手动切换，且手动切换要能双向胜出——:not() 守卫让
+   显式的 light 打得过系统 dark，:where() 保持媒体查询的优先级低于切换作用域。
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --surface-1: #fcfcfb;        /* 图表表面 */
+  --page: #f9f9f7;             /* 页面底色 */
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;       /* 轴与刻度标签 */
+  --grid: #e1e0d9;             /* 网格线，1px 实线 */
+  --axis: #c3c2b7;             /* 基线 / 轴 */
+  --hairline: rgba(11, 11, 11, 0.1);
+  --series-1: #2a78d6;         /* 分类 slot 1：折线 + 全部柱子 */
+  --delta-up: #006300;         /* 向好的变化（success text 步进） */
+  --delta-down: #d03b3b;       /* 向坏的变化（status critical，两种模式同值） */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255, 255, 255, 0.1);
+    --series-1: #3987e5;
+    --delta-up: #0ca30c;
+    --delta-down: #d03b3b;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-1: #1a1a19;
+  --page: #0d0d0d;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --series-1: #3987e5;
+  --delta-up: #0ca30c;
+  --delta-down: #d03b3b;
+}
+
+/* ---------------------------------------------------------------------------
+   界面配色（chrome）—— 和上面的图表配色是**两套独立的东西**，别混用。
+
+   图表配色受 dataviz 规范约束（色盲可分辨度、对比度门槛都是跑验证器算出来的），
+   所以那几个 hex 不能为了"好看"去动。而界面外壳——页头、按钮、导航、图标——
+   不画数据，不承载任何数值含义，配色完全自由。活力感就放在这一层。
+
+   刻意选暖色：界面暖、数据冷，读者一眼能分清"这是操作"和"这是数据"。
+   注意两条不能越界：
+   - 这个橙色只出现在图表**外面**，不能进到 plot 区域冒充某个序列
+   - KPI 的涨跌只用 --delta-up / --delta-down + 箭头 + 文字，不用 chrome 色
+--------------------------------------------------------------------------- */
+:root {
+  --brand: #ff6a2b;            /* 主强调色：操作、激活态、焦点环 */
+  --brand-strong: #ff8f1f;     /* 渐变的另一端，偏琥珀 */
+  --brand-ink: #ffffff;        /* 强调色底上的文字 */
+  --brand-soft: rgba(255, 106, 43, 0.12);  /* 图标底片、悬停浅washes */
+  --card: #ffffff;             /* 卡片底色（区别于图表表面） */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --brand-soft: rgba(255, 106, 43, 0.16);
+    --card: #171716;
+  }
+}
+
+:root[data-theme="dark"] {
+  --brand-soft: rgba(255, 106, 43, 0.16);
+  --card: #171716;
+}
+
+/* 把上面的角色暴露成 Tailwind 工具类。inline 让 Tailwind 直接输出 var(...)
+   而不是把值拷进工具类里，这样主题切换仍然生效。 */
+@theme inline {
+  --color-surface: var(--surface-1);
+  --color-page: var(--page);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-grid: var(--grid);
+  --color-axis: var(--axis);
+  --color-hairline: var(--hairline);
+  --color-series-1: var(--series-1);
+  --color-delta-up: var(--delta-up);
+  --color-delta-down: var(--delta-down);
+
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-card: var(--card);
+
+  /* 规范要求：包括大号数字在内全部使用系统 sans，不出现 display / serif 字面 */
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* 用 min-height 而不是 height：看板内容比视口高时，下面的装饰渐变才不会在
+   视口底部截断。 */
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 页面底色加一层极淡的暖光，避免大片纯色显得沉闷。纯装饰，不在图表卡片内。 */
+#root {
+  background-image:
+    radial-gradient(60rem 32rem at 12% -8%, var(--brand-soft), transparent 70%),
+    radial-gradient(48rem 28rem at 100% 0%, rgba(255, 143, 31, 0.08), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+/* 表格里的数字需要纵向对齐，用等宽数字；大号独立数字（KPI 值）不用，
+   等宽字形在大字号下会显得松散。 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

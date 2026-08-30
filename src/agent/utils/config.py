@@ -39,6 +39,7 @@ class Config(BaseSettings):
     # Reranker Configuration
     rerank_provider: str = "bge"  # "bge" / "flashrank" / "none"
     rerank_top_k: int = 5
+    rerank_score_threshold: float = 0.6  # 重排序分数阈值 (0-1)，低于此分的 chunk 被丢弃；0 关闭过滤
 
     # Retrieval Configuration
     retrieval_k: int = 40  # Number of documents to retrieve initially
@@ -59,19 +60,28 @@ class Config(BaseSettings):
     memory_max_per_extraction: int = 5
 
     # Context Window Management
-    # 模型上下文窗口大小，换模型时需同步调整
-    model_context_window: int = 65536
-    # 单次回复的输出上限。ReAct 循环中工具调用轮的输出只有几十 token，
-    # 该值实际只在生成最终回答时才可能触碰
+    #
+    # 压缩的驱动力是成本而非容量上限：每轮请求都要把完整历史作为输入重发一次
+    # 并按量计费，历史越长每轮越贵。deepseek-v4-flash 总额度 1M、单次输出上限
+    # 384K，容量本身宽裕，故下方阈值按「多长的历史值得为它花钱」来定，
+    # 不挂靠窗口大小。
+    #
+    # 单次回复的输出上限。模型侧上限为 384K，这里取 4096 是按中文健身建议的
+    # 实际长度定的（常规回答 500~1200 token，含表格的完整周期化计划约 2000）。
+    # ReAct 循环中工具调用轮的输出只有几十 token，该值只在生成最终回答时才可能触碰
     llm_max_tokens: int = 4096
     # 近似 token 计数的字符/token 比。默认值 4.0 是按英文调的，
     # 中文约 1~1.5 字符/token，用默认值会低估约 3 倍
     token_chars_per_token: float = 2.0
-    # 超过该 token 数时清理旧的工具输出，只保留最近 keep 条
-    context_clear_tools_trigger: int = 20000
+    # 超过该 token 数时清理旧的工具输出，只保留最近 keep 条。
+    # 上一轮检索到的知识片段对下一轮无价值，却会陪着一起计费到对话结束，
+    # 清理零成本且不损对话结构，所以这一级设得比较靠前
+    context_clear_tools_trigger: int = 60000
     context_clear_tools_keep: int = 3
-    # 超过该 token 数时对历史做摘要（兜底，会额外消耗一次 LLM 调用）
-    context_summarize_trigger: int = 36000
+    # 超过该 token 数时对历史做摘要。纯兜底：按每轮约 2K token 估算
+    # （含 RAG 输出的轮次约 3~4K，不含的约 0.5~1K），百轮对话才触及此线；
+    # 摘要要额外消耗一次 LLM 调用，不宜作为常规手段
+    context_summarize_trigger: int = 200000
     context_summarize_keep_messages: int = 12
 
 

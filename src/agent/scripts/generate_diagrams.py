@@ -6,7 +6,7 @@ from diagrams import Cluster, Diagram, Edge
 from diagrams.custom import Custom
 from diagrams.onprem.client import Users
 from diagrams.programming.flowchart import Database
-from diagrams.programming.framework import FastAPI
+from diagrams.programming.framework import FastAPI, React
 
 graph_attr = {"fontsize": "45", "bgcolor": "white"}
 node_attr = {"fontsize": "20"}
@@ -25,7 +25,7 @@ with Diagram(
 ):
     with Cluster("Local PC / Cloud"):
         with Cluster("Frontend"):
-            streamlit = Custom("Streamlit", str(resources_dir / "streamlit.png"))
+            react = React("React SPA")
 
         with Cluster("Backend Services"):
             fastapi = FastAPI("FastAPI Backend")
@@ -40,8 +40,8 @@ with Diagram(
     users = Users("Users")
 
     # User interactions
-    users >> Edge(label="Interacts with", style="bold") >> streamlit
-    streamlit >> Edge(label="API Requests", style="bold") >> fastapi
+    users >> Edge(label="Interacts with", style="bold") >> react
+    react >> Edge(label="API Requests", style="bold") >> fastapi
 
     # Backend flow
     fastapi >> Edge(label="Orchestrates", style="bold") >> langgraph

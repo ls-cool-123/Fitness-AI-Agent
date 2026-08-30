@@ -11,17 +11,19 @@ def test_get_reranker_none():
     """Test get_reranker with 'none' provider returns passthrough."""
     reranker = get_reranker(provider="none", top_k=3)
     docs = [Document(page_content=f"doc{i}") for i in range(5)]
-    result = reranker(docs, "query")
+    result, scores = reranker(docs, "query")
     assert len(result) == 3
     assert result[0].page_content == "doc0"
+    assert scores == [1.0, 1.0, 1.0]
 
 
 def test_get_reranker_none_fewer_docs():
     """Test passthrough doesn't truncate when fewer docs than top_k."""
     reranker = get_reranker(provider="none", top_k=5)
     docs = [Document(page_content=f"doc{i}") for i in range(2)]
-    result = reranker(docs, "query")
+    result, scores = reranker(docs, "query")
     assert len(result) == 2
+    assert scores == [1.0, 1.0]
 
 
 def test_get_reranker_invalid_provider():
@@ -44,16 +46,18 @@ def test_rerank_with_flashrank(mock_rerank_request, mock_ranker):
         {"id": 0, "score": 0.5, "text": "doc1"},
     ]
 
-    result = rerank_with_flashrank(docs, "query", top_k=2)
+    result, scores = rerank_with_flashrank(docs, "query", top_k=2)
 
     mock_ranker.assert_called_once()
     assert len(result) == 2
     # Higher score doc should be first
     assert result[0].page_content == "doc2"
     assert result[1].page_content == "doc1"
+    assert scores == [0.9, 0.5]
 
 
 def test_rerank_with_flashrank_empty_docs():
     """Test rerank_with_flashrank handles empty documents."""
-    result = rerank_with_flashrank([], "query", top_k=3)
+    result, scores = rerank_with_flashrank([], "query", top_k=3)
     assert result == []
+    assert scores == []

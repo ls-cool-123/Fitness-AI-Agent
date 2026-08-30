@@ -47,19 +47,41 @@ async def rag_search_tool(
         retriever = get_retriever(k=config.retrieval_k, collection_name=collection_name)
         docs = await retriever.ainvoke(query)
 
-        # 精排阶段：用 FlashRank 对粗筛结果重排序，截断到 top_k 条
+        # 精排阶段：用 BGE/FlashRank 对粗筛结果重排序，返回 (docs, scores)
         if config.rerank_provider != "none":
             from agent.utils.reranker import get_reranker
             reranker = get_reranker(
                 provider=config.rerank_provider,
                 top_k=min(top_k, len(docs)),
             )
-            docs = reranker(docs, query)
-        else:
-            # 未启用重排序时直接截断
-            docs = docs[:top_k]
+            docs, scores = reranker(docs, query)
 
-        # 格式化结果 —— 返回内容 + 元数据，不生成最终回答
+            # 阈值过滤：丢弃低于阈值的 chunk，防止 LLM 基于低质量文本编造回答
+            threshold = config.rerank_score_threshold
+            if threshold > 0:
+                filtered = [(doc, s) for doc, s in zip(docs, scores) if s >= threshold]
+                if not filtered:
+                    logger.info(
+                        f"All {len(docs)} chunks below threshold {threshold}, "
+                        f"max_score={max(scores):.4f}"
+                    )
+                    return json.dumps({
+                        "status": "no_relevant_info",
+                        "message": (
+                            "知识库中暂无与该问题高度相关的信息，"
+                            "建议联系人工客服获取更准确的答案。"
+                        ),
+                        "max_score": round(max(scores), 4),
+                        "threshold": threshold,
+                    }, ensure_ascii=False)
+                docs = [doc for doc, _ in filtered]
+                scores = [s for _, s in filtered]
+        else:
+            # 未启用重排序时直接截断，无分数
+            docs = docs[:top_k]
+            scores = [1.0] * len(docs)
+
+        # 格式化结果 —— 返回内容 + 元数据 + 重排序分数
         results = []
         for i, doc in enumerate(docs):
             source = doc.metadata.get("source", "unknown")
@@ -69,6 +91,7 @@ async def rag_search_tool(
                 "content": doc.page_content,
                 "source": source,
                 "category": category,
+                "score": round(scores[i], 4) if i < len(scores) else None,
             })
 
         logger.info(f"RAG search returned {len(results)} chunks for query: {query[:60]}")

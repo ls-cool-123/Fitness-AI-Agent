@@ -31,7 +31,7 @@
 - 🎯 **重排序 (Reranking)** — 支持 Cohere 和 FlashRank 两种重排序引擎，提升检索精度
 - 🔍 **链路追踪** — 基于 Phoenix 的可观测性，监控每次 LLM 调用和检索过程
 - 🌐 **REST API** — FastAPI 构建，自动生成 OpenAPI 文档
-- 🖥️ **Web 前端** — Streamlit 构建的对话界面
+- 🖥️ **Web 前端** — React + TypeScript SPA：流式对话、工具结果富渲染、训练数据看板
 - 🧠 **长期记忆** — 对话自动提取 + LLM 重要性评分，仅保留有价值信息，语义相似度 x 时间衰减精准召回
 
 ---
@@ -40,8 +40,8 @@
 
 ```
 ┌──────────────┐     ┌─────────────────────────────────────────────┐
-│   Streamlit  │────►│           FastAPI 后端 (8001)                │
-│   前端 (8501) │     │                                             │
+│    React     │────►│           FastAPI 后端 (8001)                │
+│   前端 (5173) │     │                                             │
 └──────────────┘     │  ┌─────────────────────────────────────┐    │
                      │  │      LangGraph ReAct Agent           │    │
                      │  │  ┌─────┐ ┌─────┐ ┌─────┐ ┌──────┐  │    │
@@ -185,8 +185,8 @@ MEMORY_MAX_PER_EXTRACTION=5            # 每次对话最多提取 5 条记忆
 | **重排序** | Cohere Rerank / FlashRank（本地） |
 | **链路追踪** | Arize Phoenix + OpenInference + OpenTelemetry |
 | **Web 框架** | FastAPI + Uvicorn |
-| **前端** | Streamlit |
-| **包管理** | uv |
+| **前端** | React 19 + TypeScript + Vite + Tailwind CSS + Recharts |
+| **包管理** | uv（后端）/ npm（前端） |
 | **容器化** | Docker Compose |
 
 ---
@@ -233,7 +233,7 @@ docker compose up -d
 | 服务 | URL |
 |------|-----|
 | **API 文档** | http://127.0.0.1:8001/docs |
-| **聊天前端** | http://localhost:8501 |
+| **聊天前端** | http://localhost:5173 |
 | **Qdrant 控制台** | http://localhost:6333/dashboard |
 | **Phoenix 追踪** | http://localhost:6006 |
 
@@ -282,9 +282,21 @@ docker compose up -d
 │       ├── search.py
 │       ├── rag.py
 │       └── delete.py
-├── frontend/
-│   ├── assistant.py             # Streamlit 聊天界面
-│   └── client.py                # 后端 API 客户端
+├── frontend/                     # React SPA
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts            # 开发代理：/chat /workout /documents → :8001
+│   ├── nginx.conf                # 生产反向代理（proxy_buffering off）
+│   └── src/
+│       ├── main.tsx  App.tsx  index.css
+│       ├── lib/                  # api / NDJSON 流式读取 / 配色 / 工具函数
+│       ├── types/tools.ts        # 工具输出的联合类型 + 类型守卫
+│       └── components/
+│           ├── ui/               # 基础组件
+│           ├── chat/             # 对话面板 + 工具结果卡片
+│           ├── workout/          # 快速记录训练
+│           ├── documents/        # 知识库上传
+│           └── dashboard/        # 训练数据看板（Recharts）
 ├── tests/                       # 测试
 ├── docker-compose.yml           # 服务编排
 ├── Dockerfile                   # 后端镜像
@@ -319,8 +331,10 @@ POST /chat
 ### 训练记录
 
 ```
-POST /workout/add     — 自然语言记录训练
-GET  /workout/history — 查询训练历史
+POST /workout/add              — 自然语言记录训练
+GET  /workout/history          — 查询训练历史
+GET  /workout/progress         — 进展分析 + 按日期的重量/训练量序列（看板用）
+GET  /workout/category-summary — 各身体部位的训练量汇总（看板用）
 ```
 
 ### 知识库
@@ -395,7 +409,8 @@ PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:4318/v1/traces
 ### 安装依赖
 
 ```bash
-uv sync
+uv sync                    # 后端
+cd frontend && npm ci      # 前端
 ```
 
 ### 单独启动 Qdrant
@@ -415,7 +430,15 @@ uv run uvicorn src.agent.main:app --reload --port 8001
 ### 启动前端
 
 ```bash
-cd frontend && uv run streamlit run assistant.py --theme.base="dark"
+cd frontend && npm run dev
+```
+
+Vite dev server 监听 5173，并把 `/chat`、`/workout`、`/documents` 代理到后端
+8001，因此浏览器始终同源请求，后端不需要 CORS 配置。后端不在默认端口时用
+`BACKEND_URL` 覆盖：
+
+```bash
+BACKEND_URL=http://localhost:9001 npm run dev
 ```
 
 ### Makefile 快捷命令
@@ -426,7 +449,7 @@ cd frontend && uv run streamlit run assistant.py --theme.base="dark"
 | `make style` | 运行代码格式化/检查 |
 | `make test` | 运行单元测试和集成测试 |
 | `make start_backend` | 启动 FastAPI 后端 |
-| `make start_frontend` | 启动 Streamlit 前端 |
+| `make start_frontend` | 启动 React 开发服务器（Vite） |
 | `make start_docker` | 启动全部 Docker 服务 |
 | `make restart` | 重建并重启所有服务 |
 | `make clean` | 清理构建产物 |
@@ -447,6 +470,9 @@ RUN_LIVE_E2E=1 uv run pytest -m "e2e" -v tests/
 
 # 覆盖率报告
 uv run coverage run -m pytest tests/ && uv run coverage html
+
+# 前端测试（NDJSON 流式解析的分块边界用例）
+cd frontend && npm test
 ```
 
 ### 测试标记

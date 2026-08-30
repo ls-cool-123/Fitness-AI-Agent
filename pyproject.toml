@@ -28,7 +28,6 @@ dependencies = [
     "pyfiglet>=1.0.4",
     "langchain-qdrant>=1.1.0",
     "aiofiles>=25.1.0",
-    "streamlit>=1.55.0",
     "langchain>=1.2.13",
     "langchain-litellm>=0.6.2",
     "flashrank>=0.2.10",
@@ -38,7 +37,8 @@ dependencies = [
     "alembic>=1.14.0",
     "pandas>=2.0.0",
     "jieba>=0.42.1",
-    "flagembedding>=1.4.0",
+    "sentence-transformers>=3.0.0",
+    "torch>=2.0.0",
 ]
 
 
@@ -48,6 +48,15 @@ agent = "agent:main"
 [build-system]
 requires = ["uv_build>=0.9.5,<0.10.0"]
 build-backend = "uv_build"
+
+# PyTorch CPU-only — Docker 容器无 GPU，避免下载 ~2GB CUDA 包
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 
 [tool.mypy]

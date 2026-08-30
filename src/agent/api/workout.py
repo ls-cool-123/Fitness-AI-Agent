@@ -7,6 +7,11 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from agent.tools.add_workout import add_workout_tool
+from agent.tools.analyze_progress import (
+    analyze_progress_tool,
+    get_category_summary,
+    get_progress_series,
+)
 from agent.tools.query_workout import query_workout_tool
 
 router = APIRouter()
@@ -48,15 +53,34 @@ class WorkoutHistoryResponse(BaseModel):
     sessions: list[dict] = Field(default_factory=list)
 
 
+class ProgressResponse(BaseModel):
+    """进展分析响应 —— tool 的聚合结果 + 按日期的时间序列。"""
+
+    analysis: dict = Field(
+        default_factory=dict,
+        description="analyze_progress_tool 的原始输出（两种模式的 key 集不同）",
+    )
+    series: list[dict] = Field(
+        default_factory=list,
+        description="按日期升序的 [{date, max_weight_kg, volume_kg}]，仅动作模式有值",
+    )
+
+
+class CategorySummaryResponse(BaseModel):
+    """部位训练量分布响应。"""
+
+    categories: list[dict] = Field(default_factory=list)
+
+
 @router.post("/add", tags=["workout"], summary="记录训练（结构化输入）")
 async def add_workout(request: WorkoutAddRequest) -> WorkoutAddResponse:
     """接收结构化训练数据并写入数据库。
 
-    前端通过侧边栏的 4 个输入框录入：
+    前端「记录训练」面板逐组录入次数与重量，攒好一批动作再一次提交：
     - 动作名称（如"深蹲"）
     - 组数
-    - 每组次数
-    - 重量（kg，可选）
+    - 每组次数与重量（set_details）
+    - 平均重量（weight_kg，0 表示自重）
     """
     # 将 Pydantic 模型转为 dict 列表传给 tool
     exercises = [
@@ -123,3 +147,57 @@ async def get_workout_history(
         ) from None
 
     return WorkoutHistoryResponse(sessions=sessions if isinstance(sessions, list) else [])
+
+
+@router.get("/progress", tags=["workout"], summary="分析训练进展（含按日期的趋势序列）")
+async def get_progress(
+    user_id: str = Query(description="用户 UUID"),
+    exercise_name: str | None = Query(default=None, description="动作名称，对应单动作趋势模式"),
+    category: str | None = Query(default=None, description="身体部位，对应部位聚合模式"),
+    days_back: int = Query(default=90, ge=1, le=365, description="分析窗口天数"),
+) -> ProgressResponse:
+    """返回进展分析结果，供看板的 KPI 卡片和趋势图使用。
+
+    `analysis` 直接透传 analyze_progress_tool 的输出，因此看板上的数字和 Agent
+    在对话里说的数字来自同一套计算。传了 `category` 走部位聚合模式，此时
+    `series` 为空——部位模式没有单一的重量曲线可画。
+    """
+    result_str = await analyze_progress_tool.ainvoke({
+        "user_id": user_id,
+        "exercise_name": exercise_name,
+        "category": category,
+        "days_back": days_back,
+    })
+
+    try:
+        analysis = json.loads(result_str)
+    except json.JSONDecodeError:
+        logger.error(f"Tool 返回非法 JSON: {result_str[:200]}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="无法解析进展分析数据",
+        ) from None
+
+    # 部位模式没有单一动作的重量曲线，只有单动作模式才取序列
+    series: list[dict] = []
+    if category is None:
+        series = await get_progress_series(
+            user_id=user_id,
+            exercise_name=exercise_name or "",
+            days_back=days_back,
+        )
+
+    return ProgressResponse(analysis=analysis, series=series)
+
+
+@router.get("/category-summary", tags=["workout"], summary="按身体部位汇总训练量")
+async def category_summary(
+    user_id: str = Query(description="用户 UUID"),
+    days_back: int = Query(default=90, ge=1, le=365, description="统计窗口天数"),
+) -> CategorySummaryResponse:
+    """返回各身体部位的总训练量，供看板的部位分布图使用。
+
+    一次 group_by 查询覆盖全部部位，按训练量降序返回。
+    """
+    categories = await get_category_summary(user_id=user_id, days_back=days_back)
+    return CategorySummaryResponse(categories=categories)

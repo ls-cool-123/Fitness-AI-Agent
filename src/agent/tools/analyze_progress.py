@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from langchain_core.tools import tool
 from loguru import logger
-from sqlalchemy import or_, select
+from sqlalchemy import distinct, func, or_, select
 
 from agent.db.models import ExerciseCatalog, User, WorkoutItem, WorkoutSession
 from agent.db.mysql import async_session_factory
@@ -30,6 +30,57 @@ def _resolve_user_id(user_id: str) -> uuid.UUID:
     # 情况 2：输入是普通用户名，用 uuid5 确定性映射为 UUID
     except ValueError:
         return uuid.uuid5(uuid.NAMESPACE_DNS, f"{user_id}@fitness-agent")
+
+
+def _exercise_rows_stmt(user_uuid: uuid.UUID, exercise_name: str, cutoff: date):
+    """构建单动作训练记录的查询语句。
+
+    由 tool 的模式 1 和看板的 get_progress_series 共用，确保两者基于同一批行。
+    """
+    return (
+        select(
+            WorkoutSession.session_date,
+            WorkoutItem.exercise_name,
+            WorkoutItem.sets,
+            WorkoutItem.reps,
+            WorkoutItem.weight_kg,
+            # duration_seconds 和 distance_meters 当前始终为 None，仅为有氧运动预留
+            WorkoutItem.duration_seconds,
+            WorkoutItem.distance_meters,
+        )
+        .join(WorkoutItem, WorkoutItem.session_id == WorkoutSession.id)
+        .where(
+            WorkoutSession.user_id == user_uuid,
+            WorkoutSession.session_date >= cutoff,
+            WorkoutItem.exercise_name.ilike(f"%{exercise_name}%"),  # 模糊匹配动作名
+        )
+        .order_by(WorkoutSession.session_date.asc())  # 升序，便于计算趋势
+    )
+
+
+def _aggregate_by_date(rows) -> dict[str, dict]:
+    """按日期聚合每天的最大重量与总训练量。
+
+    同一天可能有多组同一动作的训练，合并计算。tool 用它算前后半段趋势，
+    看板用它画按日期的趋势线——训练量公式只存在于这一处。
+    """
+    sessions_data: dict[str, dict] = {}
+    for row in rows:
+        d = str(row.session_date)
+        if d not in sessions_data:
+            sessions_data[d] = {"max_weight": 0.0, "total_volume": 0.0, "count": 0}
+        entry = sessions_data[d]
+        weight = row.weight_kg or 0
+        sets = row.sets or 0
+        reps = row.reps or 0
+        # 训练量 = 重量 × 组数 × 次数（单位：公斤）
+        volume = weight * sets * reps
+        # 当天最大重量（用于追踪力量增长）
+        entry["max_weight"] = max(entry["max_weight"], weight)
+        # 当天总训练量（用于追踪训练负荷）
+        entry["total_volume"] += volume
+        entry["count"] += 1
+    return sessions_data
 
 
 @tool
@@ -102,26 +153,7 @@ async def _analyze_by_exercise(
     核心算法：将时间段平分为前后两半，比较平均值的百分比变化。
     """
     # 查询该动作的所有训练记录，按日期升序排列
-    stmt = (
-        select(
-            WorkoutSession.session_date,
-            WorkoutItem.exercise_name,
-            WorkoutItem.sets,
-            WorkoutItem.reps,
-            WorkoutItem.weight_kg,
-            # duration_seconds 和 distance_meters 当前始终为 None，仅为有氧运动预留
-            WorkoutItem.duration_seconds,
-            WorkoutItem.distance_meters,
-        )
-        .join(WorkoutItem, WorkoutItem.session_id == WorkoutSession.id)
-        .where(
-            WorkoutSession.user_id == user_uuid,
-            WorkoutSession.session_date >= cutoff,
-            WorkoutItem.exercise_name.ilike(f"%{exercise_name}%"),  # 模糊匹配动作名
-        )
-        .order_by(WorkoutSession.session_date.asc())  # 升序，便于计算趋势
-    )
-    result = await session.execute(stmt)
+    result = await session.execute(_exercise_rows_stmt(user_uuid, exercise_name, cutoff))
     rows = result.all()
 
     if not rows:
@@ -132,22 +164,7 @@ async def _analyze_by_exercise(
         }, ensure_ascii=False)
 
     # 按日期聚合：同一天可能有多组同一动作的训练，合并计算
-    sessions_data: dict[str, dict] = {}
-    for row in rows:
-        d = str(row.session_date)
-        if d not in sessions_data:
-            sessions_data[d] = {"max_weight": 0.0, "total_volume": 0.0, "count": 0}
-        entry = sessions_data[d]
-        weight = row.weight_kg or 0
-        sets = row.sets or 0
-        reps = row.reps or 0
-        # 训练量 = 重量 × 组数 × 次数（单位：公斤）
-        volume = weight * sets * reps
-        # 当天最大重量（用于追踪力量增长）
-        entry["max_weight"] = max(entry["max_weight"], weight)
-        # 当天总训练量（用于追踪训练负荷）
-        entry["total_volume"] += volume
-        entry["count"] += 1
+    sessions_data = _aggregate_by_date(rows)
 
     dates = sorted(sessions_data.keys())
     max_weights = [sessions_data[d]["max_weight"] for d in dates]
@@ -333,3 +350,111 @@ async def _analyze_by_category(
         f"{len(exercises_seen)} exercises, {total_volume}kg volume"
     )
     return json.dumps(analysis, ensure_ascii=False, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# 看板专用查询 —— 不是 tool，只给 HTTP 端点用
+#
+# 这两个函数刻意放在 tool 旁边而不是 API 层：它们共用上面的 _exercise_rows_stmt
+# 和 _aggregate_by_date，所以看板画出来的数字和 Agent 在对话里说的数字必然一致。
+# analyze_progress_tool 的返回格式不受影响（它本来就不返回按日期的序列）。
+# ---------------------------------------------------------------------------
+
+
+async def get_progress_series(
+    user_id: str,
+    exercise_name: str,
+    days_back: int = 90,
+) -> list[dict]:
+    """返回某个动作按日期排列的最大重量与训练量序列。
+
+    Args:
+        user_id: 用户标识符（UUID 字符串或用户名）。
+        exercise_name: 动作名称，模糊匹配。
+        days_back: 回溯天数（上限 365）。
+
+    Returns:
+        按日期升序的列表，每项含 date / max_weight_kg / volume_kg。
+    """
+    user_uuid = _resolve_user_id(user_id)
+    days_back = min(days_back, 365)
+    cutoff = date.today() - timedelta(days=days_back)
+
+    async with async_session_factory() as session:
+        result = await session.execute(
+            _exercise_rows_stmt(user_uuid, exercise_name, cutoff)
+        )
+        by_date = _aggregate_by_date(result.all())
+
+    return [
+        {
+            "date": d,
+            "max_weight_kg": round(by_date[d]["max_weight"], 1),
+            "volume_kg": round(by_date[d]["total_volume"], 1),
+        }
+        for d in sorted(by_date)
+    ]
+
+
+async def get_category_summary(user_id: str, days_back: int = 90) -> list[dict]:
+    """按身体部位汇总训练量，供看板的部位分布图使用。
+
+    用一次 group_by 覆盖全部部位，避免为 7 个类别分别调用 analyze_progress_tool
+    （那是 7 次数据库往返）。
+
+    注意：这里只统计已关联 exercise_catalog 的动作项。_analyze_by_category 还有
+    一层按动作名模糊匹配的回退，用于补捞未关联目录的历史数据；本函数不做回退，
+    所以对这类旧数据统计会偏低。add_workout_tool 写入时会尝试关联目录，新数据不受影响。
+
+    Args:
+        user_id: 用户标识符（UUID 字符串或用户名）。
+        days_back: 回溯天数（上限 365）。
+
+    Returns:
+        列表，每项含 category / total_volume_kg / total_sessions，按训练量降序。
+    """
+    user_uuid = _resolve_user_id(user_id)
+    days_back = min(days_back, 365)
+    cutoff = date.today() - timedelta(days=days_back)
+
+    # 训练量 = 重量 × 组数 × 次数。用 coalesce 把 NULL 折成 0，效果等同于
+    # _analyze_by_category 里「三个因子都有效才计入」的判断。
+    volume_expr = func.sum(
+        func.coalesce(WorkoutItem.weight_kg, 0)
+        * func.coalesce(WorkoutItem.sets, 0)
+        * func.coalesce(WorkoutItem.reps, 0)
+    )
+
+    stmt = (
+        select(
+            ExerciseCatalog.category,
+            volume_expr.label("total_volume"),
+            func.count(distinct(WorkoutSession.id)).label("total_sessions"),
+        )
+        # 必须显式指定 FROM：第一个查询列来自 exercise_catalog，若不指定，
+        # SQLAlchemy 会从它开始 join，而下面第一个 ON 条件引用的是 workout_session。
+        .select_from(WorkoutSession)
+        .join(WorkoutItem, WorkoutItem.session_id == WorkoutSession.id)
+        .join(ExerciseCatalog, WorkoutItem.exercise_catalog_id == ExerciseCatalog.id)
+        .where(
+            WorkoutSession.user_id == user_uuid,
+            WorkoutSession.session_date >= cutoff,
+            ExerciseCatalog.category.isnot(None),
+        )
+        .group_by(ExerciseCatalog.category)
+        .order_by(volume_expr.desc())
+    )
+
+    async with async_session_factory() as session:
+        result = await session.execute(stmt)
+        rows = result.all()
+
+    logger.info(f"Category summary for {user_id}: {len(rows)} categories")
+    return [
+        {
+            "category": row.category,
+            "total_volume_kg": round(float(row.total_volume or 0), 1),
+            "total_sessions": row.total_sessions,
+        }
+        for row in rows
+    ]

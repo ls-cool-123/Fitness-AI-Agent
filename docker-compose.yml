@@ -12,11 +12,13 @@ services:
       - ./data:/data              # 保存业务数据
       - ./logs:/logs              # 保存日志文件
       - ./src:/src                # 源码挂载，修改本地文件无需重建镜像（开发用）
+      - ./hf_cache:/root/.cache/huggingface  # HuggingFace 模型缓存（BGE reranker）
+      - ./fastembed_cache:/tmp/fastembed_cache  # FastEmbed 模型缓存（BM25 稀疏检索）
 
     # 依赖服务，启动前等待数据库和向量库可用
     depends_on:
       qdrant:
-        condition: service_started
+        condition: service_healthy
       mysql:
         condition: service_healthy
 
@@ -38,11 +40,13 @@ services:
       - DATABASE_URL=mysql+aiomysql://root:root@mysql:3306/fitness_agent
       # Phoenix 链路追踪地址
       - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006/v1/traces
+      # HuggingFace Hub 离线模式 — 只读缓存不联网（容器内无法访问 huggingface.co）
+      - HF_HUB_OFFLINE=1
 
   # ===========================
-  # Streamlit 前端页面
+  # React 前端页面（nginx 托管构建产物 + 反向代理后端）
   # ===========================
-  streamlit_app:
+  web:
     build:
       context: .                  # 构建上下文
       dockerfile: Dockerfile.frontend  # 使用前端专用 Dockerfile
@@ -53,15 +57,10 @@ services:
       - agent
 
     ports:
-      - "8501:8501"               # 浏览器访问端口
+      - "5173:80"                 # 浏览器访问端口（对齐本地 vite dev 的端口）
 
-    # 挂载源码目录，修改本地文件 Streamlit 自动刷新
-    volumes:
-      - ./frontend:/app
-
-    environment:
-      - BACKEND_HOST=agent        # 指向后端服务名称（Docker 内部通信）
-      - UV_LINK_MODE=copy         # 避免 Windows 符号链接问题
+    # 不挂载源码：构建产物是静态文件，改代码要重新 build。
+    # 本地开发用 `make start_frontend`（vite dev server 带 HMR）。
 
   # ===========================
   # MySQL 8.4 数据库
@@ -122,12 +121,15 @@ services:
         limits:
           memory: 2Gb
 
-    # 健康检查接口
+    # 健康检查接口。
+    # 注意：qdrant 镜像内没有 curl/wget，改用 bash 的 /dev/tcp 探测 6333 端口。
+    # 端口在 collection 全部加载完成后才绑定，因此端口可连通 = 服务就绪。
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/livez"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # ===========================
   # Phoenix 链路追踪与可观测平台

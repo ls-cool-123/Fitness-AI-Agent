@@ -33,6 +33,8 @@
 - 🌐 **REST API** — FastAPI 构建，自动生成 OpenAPI 文档
 - 🖥️ **Web 前端** — React + TypeScript SPA：流式对话、工具结果富渲染、训练数据看板
 - 🧠 **长期记忆** — 对话自动提取 + LLM 重要性评分，仅保留有价值信息，语义相似度 x 时间衰减精准召回
+- 💾 **会话状态持久化** — LangGraph Checkpointer 支持 Postgres / SQLite / Memory 三种后端，服务重启后对话与未完成任务都可续跑，按 `user:conversation` 分线程
+- ✅ **人工确认 (HITL)** — 训练记录写库前 `interrupt()` 暂停，用户确认或修正数值后 `Command(resume=...)` 从断点继续，重启不丢
 
 ---
 
@@ -120,7 +122,9 @@
 | **0.6** | **15.4%** | **68.8%** | **84.6%** | **0.76** |
 | 0.7 | 16.0% | 65.6% | 84.0% | 0.74 |
 
-**结论:** 管线整体将存储噪音率从全量对话的约 47% 降至 15% 左右（降幅 > 30pp）。三个模型横向对比：deepseek-v4-flash 噪音率最低（15.4%），deepseek-chat 次之（22.2%），gemini-2.5-flash 最高（27.6%）。threshold = 0.6 为实际最优，在噪音率与覆盖率之间达到最佳平衡（F1=0.76），2 段纯闲聊对话均被正确识别为 0 条记忆。
+**结论:** 提取 + 评分管线把存储噪音率从全量写入的估算基线（约 47%，未单独实测）压到 15% 左右。三个模型横向对比：deepseek-v4-flash 噪音率最低（15.4%），deepseek-chat 次之（22.2%），gemini-2.5-flash 最高（27.6%）。
+
+三档阈值在噪音率上差异很小（14.8% / 15.4% / 16.0%），主要差别在覆盖率：阈值越高，越容易把有价值但表述模糊的记忆挡在门外。因此 0.6 是**偏保守**的默认值而非"最优解"——如果更看重覆盖率，可以下调到 0.5（F1 0.78 vs 0.76）。2 段纯闲聊对话在三档阈值下均被正确识别为 0 条记忆。
 
 ### 时间衰减 —— 指数半衰模型
 
@@ -173,21 +177,78 @@ MEMORY_MAX_PER_EXTRACTION=5            # 每次对话最多提取 5 条记忆
 
 ---
 
+## 会话状态与人工确认（HITL）
+
+原实现用 `MemorySaver` 保存对话状态，进程一重启，正在进行的对话和"等用户确认"
+的操作会一起消失。现在把 checkpointer 抽成可配置后端：
+
+| 后端 | 适用场景 | 特点 |
+|------|---------|------|
+| `memory` | 单测、无外部依赖的本地调试 | 重启即丢 |
+| `sqlite` | 本机验证"重启续聊" | 单文件持久化，不需要额外服务 |
+| `postgres` | 生产 / docker-compose | 多进程共享、崩溃恢复 |
+
+```
+CHECKPOINT_BACKEND=postgres
+POSTGRES_DSN=postgresql://fitness:fitness@localhost:5433/fitness_agent
+```
+
+### 线程模型
+
+`thread_id = "{user_id}:{conversation_id}"`。早期直接用 `user_id` 当线程 id，
+在内存后端下靠"重启即清空"被动兜底；持久化之后必须按对话分线程，否则同一用户
+的历史只会无限累积。`conversation_id` 缺省为 `default`，兼容未升级的前端。
+
+| 接口 | 作用 |
+|------|------|
+| `POST /chat`、`POST /chat/stream` | 请求体新增可选 `conversation_id`；出现待确认操作时返回 `interrupt` |
+| `POST /chat/confirm` | `{approved, edits?}` 恢复挂起的写入；无待确认任务返回 409 |
+| `POST /chat/reset` | 清空当前线程的 checkpoint |
+
+### 写入前的人工确认
+
+```
+LLM 解析动作 → add_workout_tool 内 interrupt() → 前端确认卡片
+            → POST /chat/confirm → Command(resume) → 写 MySQL
+```
+
+几个实现约束：
+
+- `interrupt()` 必须放在所有副作用之前——恢复时工具会从头重新执行；
+- 工具在 Agent 图外被调用（`POST /workout/add` 表单）时**不会**触发确认，
+  靠 `get_config()` 里有没有 `thread_id` 判断；
+- 重复确认由"线程是否还有待恢复任务"拦住，返回 409，避免重复写库。
+
+### 验证
+
+```bash
+# 起依赖
+docker compose up -d qdrant mysql postgres
+# 跨进程验证：进程 A 暂停 → 进程 B 确认 → 校验落库
+uv run python scripts/e2e_hitl.py
+```
+
+> Windows 本地直连 Postgres 时，psycopg 的异步连接要求 `SelectorEventLoop`；
+> 脚本里已切换事件循环策略，uvicorn 直跑则建议用 `CHECKPOINT_BACKEND=sqlite`。
+
+---
+
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
 | **LLM 网关** | LiteLLM（统一接口，支持 DeepSeek / Gemini / Cohere / OpenAI） |
-| **Agent 框架** | LangGraph（ReAct Agent + MemorySaver 短期记忆 + 长期记忆系统） |
+| **Agent 框架** | LangGraph（ReAct Agent + 中间件上下文管理 + 长期记忆） |
+| **状态存储** | LangGraph Checkpointer（Postgres / SQLite / Memory） |
 | **嵌入模型** | FastEmbed / Qwen Embedding / Google Embedding |
 | **向量数据库** | Qdrant（混合检索：稠密 + BM25 稀疏向量） |
 | **关系数据库** | MySQL 8.4 + SQLAlchemy + aiomysql |
-| **重排序** | Cohere Rerank / FlashRank（本地） |
+| **重排序** | BGE-reranker-v2-m3 / FlashRank / Cohere Rerank |
 | **链路追踪** | Arize Phoenix + OpenInference + OpenTelemetry |
 | **Web 框架** | FastAPI + Uvicorn |
 | **前端** | React 19 + TypeScript + Vite + Tailwind CSS + Recharts |
 | **包管理** | uv（后端）/ npm（前端） |
-| **容器化** | Docker Compose |
+| **容器化** | Docker Compose（含 Postgres 用于会话状态） |
 
 ---
 
@@ -246,7 +307,8 @@ docker compose up -d
 ├── src/agent/
 │   ├── main.py                  # FastAPI 应用入口 + 生命周期管理
 │   ├── agent/
-│   │   └── fitness_agent.py     # LangGraph ReAct Agent 构建
+│   │   ├── fitness_agent.py     # LangGraph ReAct Agent 构建
+│   │   └── checkpointing.py     # 会话状态后端（memory/sqlite/postgres）
 │   ├── api/                     # REST API 路由
 │   │   ├── chat.py              # POST /chat — 对话接口
 │   │   ├── workout.py           # POST /workout/add, GET /workout/history
@@ -313,7 +375,10 @@ docker compose up -d
 ### 对话
 
 ```
-POST /chat
+POST /chat            — 非流式问答（可能返回 interrupt）
+POST /chat/stream     — NDJSON 流式问答（含 interrupt 事件）
+POST /chat/confirm    — 确认/取消待写入的训练记录
+POST /chat/reset      — 清空当前对话线程
 ```
 
 向 AI 教练发送消息，Agent 自动判断意图并调用对应工具。
@@ -375,16 +440,71 @@ EMBEDDING_SIZE=768
 ### 重排序配置
 
 ```bash
-RERANK_PROVIDER=cohere           # cohere / flashrank / none
+RERANK_PROVIDER=bge              # bge（本地）/ siliconflow（远程免费）/ flashrank / none
 RERANK_TOP_K=5                   # 重排序后保留的文档数
-COHERE_API_KEY=xxx
+RERANK_CANDIDATES=15             # 送进 Cross-Encoder 的候选数（见下方延迟说明）
+BGE_RERANKER_PATH=               # 本地模型目录（离线环境）
+RERANK_API_BASE=https://api.siliconflow.cn/v1
+RERANK_API_KEY=                  # provider=siliconflow 时必填
 ```
+
+**为什么候选数从 40 降到 15**：BGE-reranker-v2-m3 在 CPU 上重排 40 条约 33 秒，
+用户每问一次知识库就要等半分钟。粗筛的覆盖率曲线（`scripts/recall_at_k.py`）：
+
+| 候选数 | 理论上限 Recall | 本地 BGE 实测延迟 |
+|:---:|:---:|:---:|
+| 40 | 1.0000 | ~33 s |
+| 20 | 0.9667 | ~17 s |
+| **15** | **0.9583** | **~8–15 s** |
+| 10 | 0.9417 | ~8 s |
+
+15 条只损失 4 个点的理论上限，延迟降到 1/2～1/4；再往下损失变大。对延迟更敏感
+可以切 `RERANK_PROVIDER=siliconflow`，把重排挪到远端（免费，毫秒级返回）。
 
 ### 检索配置
 
 ```bash
 RETRIEVAL_K=40                    # 初始检索文档数
 RETRIEVAL_K_RETRY=100             # 重试时的检索数
+```
+
+### 文档分块与 Contextual Retrieval
+
+```bash
+CHUNK_SIZE=750                    # 分块长度（字符）
+CHUNK_OVERLAP=200                 # 相邻块重叠
+# 分隔符默认已包含中文标点（。！？；，），否则中文会被按字符硬切
+CONTEXTUAL_RETRIEVAL_ENABLED=false  # 入库前为每个 chunk 生成文档级上下文前缀
+```
+
+### 会话状态与 HITL
+
+```bash
+CHECKPOINT_BACKEND=memory         # memory / sqlite / postgres
+POSTGRES_DSN=postgresql://fitness:fitness@localhost:5433/fitness_agent
+SQLITE_CHECKPOINT_PATH=data/checkpoints.sqlite
+CHECKPOINT_TTL_DAYS=30
+WORKOUT_CONFIRM_ENABLED=true      # 训练记录写入前是否 interrupt 等确认
+```
+
+> 首次在本地跑检索前需要 BM25 模型，离线环境请设置
+> `FASTEMBED_CACHE_PATH=./fastembed_cache`（docker-compose 已挂载到容器内）。
+
+### 离线 / 内网环境
+
+HF 缓存如果是 Linux 容器里下载的，快照目录在 Windows 上会变成无法解析的符号链接，
+表现为"模型明明在本地却连不上 HuggingFace"。两个环境变量可以完全绕过下载：
+
+```bash
+BM25_MODEL_PATH=resources/bm25_model      # 含 english.txt 的目录即可
+BGE_RERANKER_PATH=resources/bge_reranker  # CrossEncoder 直接加载本地目录
+```
+
+`resources/bge_reranker` 可用脚本从已有缓存"落地"成普通文件（同盘硬链接，不占额外空间）：
+
+```bash
+uv run python scripts/materialize_hf_model.py \
+    --repo BAAI/bge-reranker-v2-m3 --cache hf_cache/hub --out resources/bge_reranker
 ```
 
 ### 数据库配置

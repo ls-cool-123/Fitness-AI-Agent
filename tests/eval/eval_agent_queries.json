@@ -88,5 +88,53 @@
     "expected_tools": [],
     "difficulty": "tricky",
     "note": "闲聊——不需要调任何工具"
+  },
+  {
+    "query": "帮我制定一个三分化训练计划",
+    "expected_tools": ["create_training_plan_tool"],
+    "difficulty": "easy",
+    "note": "明确要求生成三分化计划"
+  },
+  {
+    "query": "我想增肌，给我排个五分化计划",
+    "expected_tools": ["create_training_plan_tool"],
+    "difficulty": "easy",
+    "note": "明确要求生成五分化计划"
+  },
+  {
+    "query": "我是新手，应该怎么安排训练计划",
+    "expected_tools": ["create_training_plan_tool"],
+    "difficulty": "easy",
+    "note": "新手要计划——应进计划工具"
+  },
+  {
+    "query": "帮我排个训练计划，另外深蹲腰疼要注意什么",
+    "expected_tools": ["create_training_plan_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "计划 + 伤病知识，需要两个工具"
+  },
+  {
+    "query": "训练计划应该怎么安排才科学",
+    "expected_tools": ["rag_search_tool"],
+    "difficulty": "hard",
+    "note": "理论问题——不应抢计划工具"
+  },
+  {
+    "query": "把哑铃卧推换成杠铃卧推",
+    "expected_tools": ["update_training_plan_tool"],
+    "difficulty": "easy",
+    "note": "修改已有计划里的动作"
+  },
+  {
+    "query": "计划里的深蹲换成前蹲，其他不变",
+    "expected_tools": ["update_training_plan_tool"],
+    "difficulty": "easy",
+    "note": "按动作名替换，保留其他动作"
+  },
+  {
+    "query": "帮我把计划里的哑铃卧推换掉，顺便说说杠铃卧推怎么做",
+    "expected_tools": ["update_training_plan_tool", "rag_search_tool"],
+    "difficulty": "hard",
+    "note": "修改计划 + 动作要领，需要两个工具"
   }
 ]

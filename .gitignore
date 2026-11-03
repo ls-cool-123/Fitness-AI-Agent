@@ -14,8 +14,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# 只忽略仓库根目录下的 lib/（Python 打包产物），不要误伤 frontend/src/lib 这类源码目录
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -157,8 +158,14 @@ frontend/dist/
 fastembed_cache/
 hf_cache/
 
+# 本地大模型目录（2GB+，用 scripts/materialize_hf_model.py 按需生成，不入库）
+resources/bge_reranker/
+
 # Claude 本地设置
 .claude/
+
+# DSH 本地 agent 技能配置
+.agents/
 
 # Windows 命令重定向误创建的垃圾文件
 nul

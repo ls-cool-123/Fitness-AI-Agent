@@ -37,8 +37,12 @@ class JiebaBM25Sparse:
     英文/数字直接保留原样，从而让 BM25 能对中文做正确的关键词匹配。
     """
 
-    def __init__(self, model_name: str = "Qdrant/bm25"):
-        self._inner = FastEmbedSparse(model_name=model_name)
+    def __init__(self, model_name: str = "Qdrant/bm25", model_path: str = ""):
+        # specific_model_path 会跳过 fastembed 的 HuggingFace 下载流程。
+        # 离线/内网环境把 BM25_MODEL_PATH 指向资源目录即可，否则内网环境
+        # 连建集合都会卡在模型下载上。
+        kwargs = {"specific_model_path": model_path} if model_path else {}
+        self._inner = FastEmbedSparse(model_name=model_name, **kwargs)
 
     @staticmethod
     def _segment(text: str) -> str:
@@ -58,13 +62,51 @@ class JiebaBM25Sparse:
         return self._inner.embed_query(self._segment(text))
 
 
+class _LazySparseEmbedding:
+    """BM25 稀疏嵌入的延迟代理。
+
+    FastEmbedSparse 在构造时就会解析/下载模型文件，把它放在模块顶层会让
+    "import agent.utils.vdb" 变成一次网络调用——单测、脚本、甚至只查 MySQL
+    的接口都会被拖慢，离线环境还会直接失败。这里改成首次使用时才真正加载。
+
+    接口与 JiebaBM25Sparse 保持一致（embed_query / embed_documents /
+    embed_text），因此 QdrantVectorStore 无感知。
+    """
+
+    def __init__(self, model_name: str = "Qdrant/bm25", model_path: str = "") -> None:
+        self._model_name = model_name
+        self._model_path = model_path
+        self._inner: JiebaBM25Sparse | None = None
+
+    def _get(self) -> JiebaBM25Sparse:
+        if self._inner is None:
+            self._inner = JiebaBM25Sparse(
+                model_name=self._model_name, model_path=self._model_path
+            )
+        return self._inner
+
+    def embed_query(self, text: str) -> SparseVector:
+        return self._get().embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[SparseVector]:
+        return self._get().embed_documents(texts)
+
+    def embed_text(self, text: str) -> SparseVector:
+        return self._get().embed_text(text)
+
+
 # ============================================================
 # 模块级单例：在 import 时初始化，整个应用生命周期内复用
 # ============================================================
 
 # BM25 稀疏嵌入模型 —— 用于混合检索中的关键词匹配
 # 使用 jieba 预处理中文文本，解决 FastEmbedSparse 对中文无效的问题
-sparse_embeddings = JiebaBM25Sparse(model_name="Qdrant/bm25")
+# 注意：这里是延迟代理，首次 embed 时才加载模型；配置了本地模型目录时不再联网
+_settings = Config()
+sparse_embeddings = _LazySparseEmbedding(
+    model_name="Qdrant/bm25",
+    model_path=_settings.bm25_model_path or "",
+)
 
 # 从配置中读取 Qdrant 连接参数
 settings = Config()
@@ -95,6 +137,20 @@ with warnings.catch_warnings():
 # ============================================================
 # LangChain VectorStore 封装
 # ============================================================
+
+# 稀疏向量字段名，必须与 init_vdb 里传给 QdrantVectorStore 的一致
+SPARSE_VECTOR_NAME = "fast-sparse-bm25"
+
+
+def _sparse_vectors_config() -> dict[str, models.SparseVectorParams]:
+    """构建稀疏向量字段配置。
+
+    ``modifier=IDF`` 表示由 Qdrant 在打分时套用逆文档频率——这是 BM25 需要的，
+    词频部分已经写在客户端生成的稀疏向量里。
+    """
+    return {
+        SPARSE_VECTOR_NAME: models.SparseVectorParams(modifier=models.Modifier.IDF),
+    }
 
 def init_vdb(collection_name: str, embedding: Embeddings) -> QdrantVectorStore:
     """建立与 Qdrant DB 的连接并返回 LangChain VectorStore 实例。
@@ -187,16 +243,19 @@ def generate_collection(collection_name: str, embeddings_size: int) -> None:
 
     """
     client = load_vec_db_conn()
-    # 设置稀疏嵌入模型（BM25），使 Qdrant 内部能处理稀疏向量
-    client.set_sparse_model(embedding_model_name="Qdrant/bm25")
-    # 创建集合：同时定义稠密向量配置和稀疏向量配置
+    # 创建集合：同时定义稠密向量配置和稀疏向量配置。
+    #
+    # 这里不调用 client.set_sparse_model()：那个 API 会让 qdrant_client 自己
+    # 初始化一份 fastembed 模型并从 HuggingFace 下载，离线环境直接失败。
+    # 本项目的稀疏向量全部由客户端（JiebaBM25Sparse）算好后写入，服务端只需要
+    # 一个带 IDF 修饰符的稀疏向量字段。
     client.create_collection(
         collection_name=collection_name,
         vectors_config=models.VectorParams(
             size=embeddings_size,            # 稠密向量维度
             distance=models.Distance.COSINE,  # 余弦相似度
         ),
-        sparse_vectors_config=client.get_fastembed_sparse_vector_params(),  # BM25 稀疏向量参数
+        sparse_vectors_config=_sparse_vectors_config(),  # BM25 稀疏向量参数
     )
     logger.info(f"SUCCESS: Collection {collection_name} created.")
 
@@ -231,13 +290,11 @@ async def generate_collection_async(collection_name: str, embeddings_size: int) 
 
     """
     client = get_async_qdrant_client()
-    # 设置稀疏嵌入模型
-    client.set_sparse_model(embedding_model_name="Qdrant/bm25")
-    # 异步创建集合
+    # 同同步版本：不在服务端加载 BM25 模型，只声明稀疏向量字段
     await client.create_collection(
         collection_name=collection_name,
         vectors_config=models.VectorParams(size=embeddings_size, distance=models.Distance.COSINE),
-        sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+        sparse_vectors_config=_sparse_vectors_config(),
     )
     logger.info(f"SUCCESS: Collection {collection_name} created.")
 

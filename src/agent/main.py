@@ -10,20 +10,25 @@
 7. 挂载各子模块路由
 """
 
-import pyfiglet
 from contextlib import asynccontextmanager
+
+import pyfiglet
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from loguru import logger
+
 # OpenInference: 自动为 LangChain/LangGraph 创建 OpenTelemetry span，
 # 将 Agent 内部的 LLM 调用、工具调用、检索等操作作为 tracing span 上报
 from openinference.instrumentation.langchain import LangChainInstrumentor
+
 # Phoenix: Arize 的开源 LLM 可观测性平台，收集并可视化 tracing 数据
 from phoenix.otel import register
 
-from agent.api import chat, documents, workout
+from agent.agent.checkpointing import init_checkpointer
+from agent.agent.fitness_agent import build_fitness_agent, set_agent
+from agent.api import chat, documents, plan, workout
 from agent.utils.config import Config
 from agent.utils.vdb import initialize_all_vector_dbs
 
@@ -50,6 +55,14 @@ async def lifespan(_app: FastAPI):
     # 初始化 Qdrant 客户端，创建/验证集合是否存在
     initialize_all_vector_dbs(config=config)
 
+    # 会话状态存储：memory / sqlite / postgres，由 CHECKPOINT_BACKEND 决定。
+    # 必须在构建 Agent 之前完成——checkpointer 是编译期参数，不能事后替换。
+    logger.info(f"Initializing checkpointer ({config.checkpoint_backend})...")
+    checkpointer = await init_checkpointer(config)
+    _app.state.checkpointer = checkpointer
+    # 带着持久化 checkpointer 构建 Agent，并注册为模块级单例
+    set_agent(build_fitness_agent(config, checkpointer=checkpointer.saver))
+
     logger.info("Initializing MySQL...")
     # 延迟导入：MySQL 初始化需要用到全局配置，放在函数内可以避免
     # import 时触发循环依赖（mysql 模块也依赖 config）
@@ -68,12 +81,27 @@ async def lifespan(_app: FastAPI):
     yield
     # ---- 关闭阶段 ----
     logger.info("Shutting down.")
+    # 释放 Postgres 连接池 / 关闭 sqlite 文件句柄
+    await checkpointer.aclose()
+    # 释放 MySQL 连接池：不销毁的话进程退出时引擎可能绑在已关闭的事件循环上，
+    # 打印 "Event loop is closed" 之类噪声
+    from agent.db.mysql import close_db  # noqa: PLC0415
+
+    await close_db()
 
 # ---- OpenTelemetry / Phoenix 链路追踪初始化 ----
-# register() 返回一个全局 TracerProvider，后续所有 span 都由此提供者管理
+# register() 返回一个全局 TracerProvider，后续所有 span 都由此提供者管理。
+#
+# 必须用 batch=True：默认的 SimpleSpanProcessor 会在 span 结束时同步导出，
+# 当 Phoenix 没启动/DNS 不可达（比如本地跑后端、PHOENIX_COLLECTOR_ENDPOINT
+# 还是 docker 内部主机名 phoenix）时，每次导出都要等 DNS 超时/重试。
+# 这个阻塞发生在 LangGraph 事件流收尾阶段——用户看到的现象就是回答已经吐完，
+# 但 /chat/stream 迟迟不关闭、发送按钮一直停在「停止」状态。
+# BatchSpanProcessor 把导出放到后台线程，流式请求不再被 tracing 拖住。
 tracer_provider = register(
     project_name="rag",  # Phoenix UI 中显示的项目名称
     endpoint=config.phoenix_collector_endpoint,  # Phoenix 收集器的 gRPC/HTTP 地址
+    batch=True,
 )
 
 # 自动注入 LangChain/LangGraph 的 tracing hook：
@@ -137,6 +165,7 @@ logger.info("Loading REST API Finished.")
 # 每个子模块有独立的 router 和 prefix，URL 前缀即 API 版本边界
 app.include_router(router=chat.router, prefix="/chat")          # POST /chat, /chat/stream
 app.include_router(router=workout.router, prefix="/workout")    # POST /workout/add, /workout/history
+app.include_router(router=plan.router, prefix="/plan")          # POST /plan/generate, GET /plan/muscles, ...
 app.include_router(router=documents.router, prefix="/documents")  # POST /documents/upload
 
 

@@ -11,7 +11,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, Uuid, func
+from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -159,3 +159,45 @@ class WorkoutItem(Base):
 
     # 关联的标准动作目录条目。可为空——用户输入的动作可能无法匹配到标准目录。
     exercise_catalog: Mapped["ExerciseCatalog | None"] = relationship()
+
+
+class TrainingPlan(Base):
+    """用户生成的训练计划快照。
+
+    一份计划包含多天、每天多个动作，结构是「天 → 动作」的嵌套 JSON。计划是
+    生成时刻的快照：动作库以后调整不应该改写用户已经保存的计划，所以正文整体
+    存在 ``plan_data`` 里，而不是拆成 day/item 两张表。
+
+    需要按用户/时间筛选的字段（name/experience/split/source）单独落列，避免
+    列表页为了排序去解析整份 JSON。
+    """
+
+    __tablename__ = "training_plans"
+
+    # 计划唯一标识，同时作为 API 的 plan_id。
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+
+    # 所属用户，删除用户时由业务层决定是否清理计划（当前不做级联）。
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False, index=True)
+
+    # 计划展示名，如「三分化 · 新手 · 胸重点」。
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # 目标（增肌/力量/减脂/塑形）与训练经验（beginner/experienced）。
+    goal: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    experience: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    # 分化方式：three_day / five_day。
+    split_type: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    # 计划来源：anatomy（人体图一键生成）/ chat（AI 对话确认后生成）。
+    source: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+
+    # 重点肌群，便于列表页展示；完整信息仍在 plan_data。
+    focus_muscles: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+
+    # 完整计划快照：version/name/days/exercises/alternatives/warnings 等。
+    plan_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+    # 创建时间。服务层会显式写入 UTC 时间，方便直接回填 plan_data.created_at。
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

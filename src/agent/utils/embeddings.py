@@ -8,6 +8,7 @@
 - OpenAI
 - 通义千问（Qwen）
 - DashScope
+- local：本地 fastembed 模型（不联网、免费，适合离线/内网/零成本场景）
 """
 
 # LangChain 中所有 Embedding 模型的统一父类
@@ -116,6 +117,55 @@ def get_embedding_model(cfg: Config) -> Embeddings:
 
                 # 不检查文本长度限制
                 check_embedding_ctx_length=False,
+            )
+
+        # ==============================
+        # 第三方 OpenAI 兼容网关（硅基流动等）
+        # ==============================
+        #
+        # 硅基流动的 BAAI/bge-m3、bge-large-zh-v1.5 是免费模型，
+        # 接口与 OpenAI 兼容，换 base_url 即可，适合替代收费的 DashScope。
+        # 注意不要传 dimensions：非 OpenAI 官方端点普遍不支持该参数。
+        case "siliconflow" | "thirdparty":
+
+            from langchain_openai import OpenAIEmbeddings  # noqa: PLC0415
+
+            base_url = cfg.embedding_api_base or "https://api.siliconflow.cn/v1"
+            api_key = cfg.embedding_api_key or cfg.openai_api_key or None
+            if not api_key:
+                msg = "EMBEDDING_API_KEY 未配置，无法调用第三方 embedding 网关。"
+                raise ValueError(msg)
+
+            return OpenAIEmbeddings(
+                model=model_name,
+                api_key=api_key,
+                base_url=base_url,
+                check_embedding_ctx_length=False,
+            )
+
+        # ==============================
+        # 本地 fastembed（ONNX，不依赖 torch）
+        # ==============================
+        #
+        # 免费、离线可跑，适合零成本/内网环境。中文推荐：
+        #   BAAI/bge-small-zh-v1.5（512 维，~95 MB）
+        #   jinaai/jina-embeddings-v2-base-zh（768 维，更长上下文）
+        # 注意：换 embedding 模型后维度会变，已有集合必须重建。
+        case "local" | "fastembed":
+
+            try:
+                from langchain_community.embeddings import (
+                    FastEmbedEmbeddings,
+                )  # noqa: PLC0415
+
+            except ImportError as exc:
+                msg = "fastembed is required for local embeddings."
+                raise ImportError(msg) from exc
+
+            # cache_dir 留空时 fastembed 自己读 FASTEMBED_CACHE_PATH 环境变量
+            return FastEmbedEmbeddings(
+                model_name=model_name,
+                cache_dir=cfg.fastembed_cache_dir or None,
             )
 
         # ==============================

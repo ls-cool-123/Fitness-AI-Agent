@@ -7,6 +7,7 @@ from agent.utils.utility import (
     convert_qdrant_result_to_retrieval_results,
     create_tmp_folder,
     format_docs_for_citations,
+    resolve_user_id,
 )
 from agent.data_model.internal_model import RetrievalResults
 
@@ -74,3 +75,18 @@ def test_format_docs_for_citations():
     ]
     result = format_docs_for_citations(docs)
     assert result == "<doc id='0'>This is a test document.</doc>\n<doc id='1'>This is another test document.</doc>"
+
+
+def test_resolve_user_id_is_deterministic():
+    """同一用户名必须映射到同一 UUID，否则计划/训练记录会写到不同用户下。"""
+    first = resolve_user_id("default-user")
+    second = resolve_user_id("default-user")
+    assert first == second
+    assert str(first) != "default-user"
+
+
+def test_resolve_user_id_accepts_uuid():
+    import uuid
+
+    value = uuid.uuid4()
+    assert resolve_user_id(str(value)) == value

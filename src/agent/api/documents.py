@@ -81,6 +81,11 @@ async def upload_documents(
     upload_time = datetime.now(timezone.utc).isoformat()
     results = []
 
+    # 第一步：先把所有合法文件落盘，记录 (文件名, 扩展名)。
+    # 这里不能边写边嵌：embed_documents 是按目录 + 后缀批量加载的，
+    # 如果每写一个文件就调用一次，tmp 目录里已有的同后缀文件会被重复入库
+    # （上传 3 个 PDF → 第一个文件被嵌入 3 次，chunk 数按平方膨胀）。
+    written: list[tuple[str, str]] = []
     for file in files:
         # 跳过空文件名的上传项
         if not file.filename:
@@ -97,31 +102,41 @@ async def upload_documents(
             continue
 
         try:
-            # 写入磁盘 → 嵌入 → 存入 Qdrant
-            file_path = await _write_and_get_path(file, tmp_dir)
-            logger.info(f"处理中: {file.filename} (category={category})")
+            await _write_and_get_path(file, tmp_dir)
+            written.append((file.filename, ext))
+        except Exception as e:  # noqa: BLE001 - 单个文件失败不影响同批其他文件
+            logger.error(f"文件落盘失败 {file.filename}: {e}")
+            results.append({"filename": file.filename, "status": "error", "reason": str(e)})
 
+    # 第二步：按扩展名分组，每种后缀只加载并嵌入一次
+    by_extension: dict[str, list[str]] = {}
+    for filename, ext in written:
+        by_extension.setdefault(ext, []).append(filename)
+
+    for ext, filenames in by_extension.items():
+        logger.info(f"处理中: {len(filenames)} 个 {ext} 文件 (category={category})")
+        try:
             service = EmbeddingManagement(collection_name=collection_name)
             # embedding 操作可能涉及网络 I/O，放到线程池中执行避免阻塞事件循环
-            await asyncio.to_thread(
+            chunk_count = await asyncio.to_thread(
                 service.embed_documents,
-                directory=str(tmp_dir),
-                file_ending=ext,
+                str(tmp_dir),
+                ext,
+                category,
+                upload_time,
             )
-
-            results.append({
-                "filename": file.filename,
-                "status": "success",
-                "category": category,
-                "upload_time": upload_time,
-            })
-        except Exception as e:
-            logger.error(f"嵌入失败 {file.filename}: {e}")
-            results.append({
-                "filename": file.filename,
-                "status": "error",
-                "reason": str(e),
-            })
+            for filename in filenames:
+                results.append({
+                    "filename": filename,
+                    "status": "success",
+                    "category": category,
+                    "upload_time": upload_time,
+                    "chunks": chunk_count,
+                })
+        except Exception as e:  # noqa: BLE001 - 单批失败只影响这批文件
+            logger.error(f"嵌入失败 {filenames}: {e}")
+            for filename in filenames:
+                results.append({"filename": filename, "status": "error", "reason": str(e)})
 
     # 全部成功返回 "success"，部分失败返回 "partial"
     return {

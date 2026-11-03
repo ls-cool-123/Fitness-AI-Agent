@@ -1,0 +1,482 @@
+[
+  {
+    "query": "酒精与训练：一杯啤酒要付多少代价",
+    "category": "title_recall",
+    "relevant_docs": [
+      "3b296d23-f9b1-458c-8dc6-a60bf81f35fa",
+      "9a431157-b7f2-4ad9-8376-a63ced73a345"
+    ]
+  },
+  {
+    "query": "杠铃划船：把背练厚的关键动作",
+    "category": "title_recall",
+    "relevant_docs": [
+      "20c31a6f-616b-47c7-bea5-96bd1712064b",
+      "792fb421-65b0-4f31-8df3-55fedc6061d6"
+    ]
+  },
+  {
+    "query": "新手 5×5 计划：简单但有效的起步方案",
+    "category": "title_recall",
+    "relevant_docs": [
+      "509dd91a-f840-4455-8336-1328c28ac339",
+      "ed3effa8-c628-4c51-a919-dacf49cf8ed6"
+    ]
+  },
+  {
+    "query": "卧推肩胛后缩：把肩膀\"锁\"进凳子里",
+    "category": "title_recall",
+    "relevant_docs": [
+      "5e43f58d-45df-497a-a481-ed9328a021d8",
+      "d2189dbe-f0d0-4f6e-bb9a-4bcb8311f7ac"
+    ]
+  },
+  {
+    "query": "增肌减脂同时进行：body recomposition 的适用条件",
+    "category": "title_recall",
+    "relevant_docs": [
+      "9684063e-40c8-422e-a5d9-a8715cdeaa03",
+      "d2a15071-c0e7-4239-8e96-bfde72a969ad"
+    ]
+  },
+  {
+    "query": "腹内压与瓦式呼吸：大重量下的核心支撑",
+    "category": "title_recall",
+    "relevant_docs": [
+      "29f890ea-3bda-4e7c-961a-fbd51b19ec31",
+      "497fa940-a1f9-4c91-8fba-562bcb399198"
+    ]
+  },
+  {
+    "query": "增肌期与减脂期怎么排：一年的大周期",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1638096a-5326-45d9-92a9-f1fc9f7e7706",
+      "2bf666de-07bb-4c7d-b2a5-42fc41138f8d"
+    ]
+  },
+  {
+    "query": "减脂热量缺口怎么设：从 TDEE 开始算",
+    "category": "title_recall",
+    "relevant_docs": [
+      "3c00a652-7831-4f4e-b842-c0af682170a2",
+      "be1ef546-2af2-4eef-b775-f3da2cbb3f1a"
+    ]
+  },
+  {
+    "query": "碳水循环：训练日多吃、休息日少吃",
+    "category": "title_recall",
+    "relevant_docs": [
+      "ecd023a7-c747-420a-9466-e84afaf504bc",
+      "f7e48581-4771-4c8c-828b-1deccc22ce49"
+    ]
+  },
+  {
+    "query": "有氧和力量训练谁先做：顺序背后的取舍",
+    "category": "title_recall",
+    "relevant_docs": [
+      "33f6c7e3-2ed5-4157-bc75-a760f6e36c3d",
+      "59bde86f-2eec-4173-906d-d4a292680fa9"
+    ]
+  },
+  {
+    "query": "欺骗餐与饮食依从性：别把奖励变成失控",
+    "category": "title_recall",
+    "relevant_docs": [
+      "d750602e-3a95-4754-bf79-078be4df4a69",
+      "ea8589da-e3ae-4860-b673-cd9eac1795fc"
+    ]
+  },
+  {
+    "query": "硬拉起始姿势：从脚掌到杠铃的距离开始",
+    "category": "title_recall",
+    "relevant_docs": [
+      "01e770a0-5e81-4710-8c93-9876bed37322",
+      "abacc608-6510-45d4-b6c7-5783a2444cdd"
+    ]
+  },
+  {
+    "query": "延迟性肌肉酸痛（DOMS）：练完第二天为什么这么痛",
+    "category": "title_recall",
+    "relevant_docs": [
+      "480a45bd-3c52-4caf-9318-b7daa92188e0",
+      "fa44ba35-fbfc-4fd3-ab92-255c1ffe5811"
+    ]
+  },
+  {
+    "query": "减载周怎么安排：让身体追上训练",
+    "category": "title_recall",
+    "relevant_docs": [
+      "526d6d61-2683-43d2-a1d4-9ddc584ec282",
+      "f09410b7-1fd9-4a2a-baa3-e9b9150d689f"
+    ]
+  },
+  {
+    "query": "箭步蹲与保加利亚分腿蹲：单侧腿部训练",
+    "category": "title_recall",
+    "relevant_docs": [
+      "d86039a5-3d0b-4905-8463-5496152281d9",
+      "e70b5364-ebd1-4643-b634-83c0759b88be"
+    ]
+  },
+  {
+    "query": "空腹有氧能多减脂吗：把机制和效果分开看",
+    "category": "title_recall",
+    "relevant_docs": [
+      "449672c4-3137-409c-a4bc-fce454e0d47d",
+      "54a50c25-30b3-4f63-84b9-f2b180769518"
+    ]
+  },
+  {
+    "query": "脂肪不是敌人：每日脂肪摄入的下限",
+    "category": "title_recall",
+    "relevant_docs": [
+      "a85a66dd-8cb9-4453-bffc-015bd4291bf3",
+      "c0e41dc2-57cf-4ada-90ca-a754c1579c5b"
+    ]
+  },
+  {
+    "query": "膳食纤维：减脂期的饱腹感工具",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1fbdaec5-8ce2-4de7-ab6a-711734fb4938",
+      "f4b8a46b-6dc5-4f12-8beb-7237dd55ad3b"
+    ]
+  },
+  {
+    "query": "泡沫轴怎么用：滚压的时机与强度",
+    "category": "title_recall",
+    "relevant_docs": [
+      "340b39f6-be23-4e39-92fe-41d0431312ae",
+      "7b8482fb-90d5-45c9-8617-414e81245b6a"
+    ]
+  },
+  {
+    "query": "全身训练每周三次：时间少也能练出效果",
+    "category": "title_recall",
+    "relevant_docs": [
+      "205b7724-2244-4c4f-aad1-d0dd5cfbe18a",
+      "7806deea-4076-444e-9b55-cf411a733b75"
+    ]
+  },
+  {
+    "query": "握力训练：被忽视的短板",
+    "category": "title_recall",
+    "relevant_docs": [
+      "227c9c84-337b-48c5-8670-3e4a8fda38ac",
+      "5460bb7f-4622-4151-852e-f143895f1d0e"
+    ]
+  },
+  {
+    "query": "HIIT 与 LISS 怎么选：时间、目标与恢复",
+    "category": "title_recall",
+    "relevant_docs": [
+      "b77b4347-1f8d-4c35-8aa8-010e0020613f",
+      "fd36e9bc-d295-4b36-818d-66915277ce85"
+    ]
+  },
+  {
+    "query": "臀推：把臀部训练从\"感觉\"变成\"负荷\"",
+    "category": "title_recall",
+    "relevant_docs": [
+      "08d9f498-899e-4ffe-8544-19e7d055934f",
+      "5ceea513-338c-4399-837c-dd2de0857c4a"
+    ]
+  },
+  {
+    "query": "补水与电解质：训练日的饮水策略",
+    "category": "title_recall",
+    "relevant_docs": [
+      "589dab7f-c3d7-4cd0-87ac-de8c6f6ed394",
+      "767803bf-0a40-462f-afa6-61487d3f0b28"
+    ]
+  },
+  {
+    "query": "生病之后怎么恢复训练：从散步开始",
+    "category": "title_recall",
+    "relevant_docs": [
+      "67c96b6f-60bb-4bf1-8d83-ce84f305c3f0",
+      "f000c6d2-a63d-4265-853e-eaa740dd3e39"
+    ]
+  },
+  {
+    "query": "爬坡走与爬楼梯：低冲击有氧的实用选择",
+    "category": "title_recall",
+    "relevant_docs": [
+      "6cb9b46f-a84e-4f47-b8d7-d6d413c52f2c",
+      "96c5c82c-49d6-47ee-9ef2-3676d193d35f"
+    ]
+  },
+  {
+    "query": "跳绳入门：从 30 秒到连续 5 分钟",
+    "category": "title_recall",
+    "relevant_docs": [
+      "169ed847-ad0c-4c72-a6b5-93c342594d39",
+      "3791fe80-e364-42c4-bcec-f4ebb77b975c"
+    ]
+  },
+  {
+    "query": "跑步膝痛：髌骨周围疼痛怎么练回去",
+    "category": "title_recall",
+    "relevant_docs": [
+      "3044ed46-690e-4b69-bfd2-01d1de867d4c",
+      "f91bac8c-7b29-4df7-be5e-af43d45fe9c9"
+    ]
+  },
+  {
+    "query": "膝盖内扣（膝外翻）的识别与纠正",
+    "category": "title_recall",
+    "relevant_docs": [
+      "10aadfd3-3abe-4469-a169-52f10dd9ba88",
+      "1f9131c4-c950-4c28-bd17-bb59664342ac"
+    ]
+  },
+  {
+    "query": "腰椎保护：训练中怎么避免\"腰先累\"",
+    "category": "title_recall",
+    "relevant_docs": [
+      "5db5eeb7-27b6-4ccb-9860-ea578ed52c07",
+      "ea797f90-dc24-4f4b-a59c-4f4b82083f91"
+    ]
+  },
+  {
+    "query": "一天吃几餐：餐次、饱腹感与依从性",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1b990ae2-df68-433a-8fea-44cd8a57fec4",
+      "4720f6b2-45a9-4f40-9292-801872d78f3b"
+    ]
+  },
+  {
+    "query": "看懂营养标签：每份还是每 100 克",
+    "category": "title_recall",
+    "relevant_docs": [
+      "36f01a6d-0079-46b5-8588-f13553ed4b80",
+      "85543655-6eb7-446a-a786-f25fd2cf46e3"
+    ]
+  },
+  {
+    "query": "站姿杠铃推举：从上背到核心的一条线",
+    "category": "title_recall",
+    "relevant_docs": [
+      "924c0549-5ce4-4c6a-8c2e-ccc3e2e96d4e",
+      "caf00e9b-2e5c-4313-85ff-5fcad5f3e583"
+    ]
+  },
+  {
+    "query": "过度训练的早期信号：什么时候该减量",
+    "category": "title_recall",
+    "relevant_docs": [
+      "02b44d76-d18f-45e6-b18e-1b2744a39632",
+      "5aa9f6c3-f5f9-496c-9f32-65aafcf234f9"
+    ]
+  },
+  {
+    "query": "训练平台期怎么破：先判断再换变量",
+    "category": "title_recall",
+    "relevant_docs": [
+      "2e72b1cf-02cd-474a-8373-5a3e679774ab",
+      "37c6170c-eeb6-428e-b800-c760019f6c9e"
+    ]
+  },
+  {
+    "query": "训练前吃什么：时间、份量与碳水选择",
+    "category": "title_recall",
+    "relevant_docs": [
+      "53885403-c55d-4f24-8a57-0520373285a2",
+      "cb0f3d95-51aa-42a0-8bf8-29a65d36e82d"
+    ]
+  },
+  {
+    "query": "渐进超负荷的三种方式：加重量、加次数、加密度",
+    "category": "title_recall",
+    "relevant_docs": [
+      "e8e85f76-9507-4d70-950a-c3d6b28181e1",
+      "fdc06175-d0b7-464e-9398-efee98df6fad"
+    ]
+  },
+  {
+    "query": "蛋白质摄入量：每公斤体重吃多少",
+    "category": "title_recall",
+    "relevant_docs": [
+      "44ad7e83-c042-4631-8b91-66a28497066c",
+      "8bb5e6d8-f24d-4f38-9667-71470c61d9e1"
+    ]
+  },
+  {
+    "query": "引体向上从零到一：四周起步路线",
+    "category": "title_recall",
+    "relevant_docs": [
+      "3da693b2-1f6c-4e4e-ab94-0a63394e72d7",
+      "413c1e99-33c0-454c-8727-f947911e6a1b"
+    ]
+  },
+  {
+    "query": "推拉腿分化：每周六练的高容量结构",
+    "category": "title_recall",
+    "relevant_docs": [
+      "62760763-2e2b-413a-899b-073fcbf81fd8",
+      "ca765e61-e2a2-4c62-9648-eccaf307e1b4"
+    ]
+  },
+  {
+    "query": "饮食休息与 refeed：减脂卡住时的两种工具",
+    "category": "title_recall",
+    "relevant_docs": [
+      "2953731a-e447-47c9-8368-9e857bce9604",
+      "d5cc76bd-8ae6-4a97-a0bd-46e6234e4e6d"
+    ]
+  },
+  {
+    "query": "休息日怎么安排：完全躺平还是主动恢复",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1cd2666f-9395-49da-8518-1d7ea4d13d26",
+      "d7253ab1-5d6b-4481-8535-cfcbdeca0f6c"
+    ]
+  },
+  {
+    "query": "罗马尼亚硬拉：髋铰链的教科书动作",
+    "category": "title_recall",
+    "relevant_docs": [
+      "d44a931c-0baa-4374-b8a3-00be01ada452",
+      "efc521f1-6eb8-4ad3-b497-6d7a817ad7f6"
+    ]
+  },
+  {
+    "query": "肩袖肌群强化：给肩膀加一层保护",
+    "category": "title_recall",
+    "relevant_docs": [
+      "09428285-8c42-4d14-a268-7dda5d6794fb",
+      "af1b89ae-06d3-48b8-845c-933dc7aef45a"
+    ]
+  },
+  {
+    "query": "划船机动作：用腿、用髋、再用手",
+    "category": "title_recall",
+    "relevant_docs": [
+      "40c136f4-9c28-48fa-ba96-9fb0cf6d27b4",
+      "d477be18-d6b9-40a4-9e92-d91f9258f2fa"
+    ]
+  },
+  {
+    "query": "RPE 与 RIR：用自感用力程度控制强度",
+    "category": "title_recall",
+    "relevant_docs": [
+      "218e259d-c060-44c5-9c8c-cc2684c927fb",
+      "600c451b-ecc0-466e-96b6-4b4dd2d94284"
+    ]
+  },
+  {
+    "query": "配速与心率：跑步强度的两种语言",
+    "category": "title_recall",
+    "relevant_docs": [
+      "b3119e61-3b35-4e11-ad31-93fae58279a8",
+      "e59ba779-7bf8-415e-b731-a8e97830d230"
+    ]
+  },
+  {
+    "query": "睡眠与肌肉恢复：最被低估的训练变量",
+    "category": "title_recall",
+    "relevant_docs": [
+      "751c0491-2e49-4e95-9a3e-3e6d0f9cc6e2",
+      "87251d19-5adf-4942-966c-8e439c105763"
+    ]
+  },
+  {
+    "query": "深蹲深度与膝盖位置：蹲多低才算标准",
+    "category": "title_recall",
+    "relevant_docs": [
+      "c850f7cf-661d-4c23-afe0-e8d59780bf44",
+      "c868b8a2-f70f-4924-96e5-36e37d930d9c"
+    ]
+  },
+  {
+    "query": "压力与恢复：心理负荷也会占用恢复预算",
+    "category": "title_recall",
+    "relevant_docs": [
+      "531265ea-ec4b-420b-b306-9d488f50b15c",
+      "7a76f092-3afc-4c3b-a50a-4f74c99f75a0"
+    ]
+  },
+  {
+    "query": "拉伸的时机：训练前动态、训练后静态",
+    "category": "title_recall",
+    "relevant_docs": [
+      "2702fcd6-679c-4c9b-bccc-e0e70e2912e3",
+      "dcaba580-502d-4b54-b3d1-afa3494ad9b7"
+    ]
+  },
+  {
+    "query": "补剂的优先级：先吃饭，再谈补剂",
+    "category": "title_recall",
+    "relevant_docs": [
+      "3e005ae1-110a-4752-b631-6fbf4c195499",
+      "64ed7374-afe9-4ec7-8346-3e810be594b0"
+    ]
+  },
+  {
+    "query": "离心与节奏训练：用时间换刺激",
+    "category": "title_recall",
+    "relevant_docs": [
+      "79a5b559-9c8c-47ef-aa0e-56500235d093",
+      "9088338f-5489-4b14-9123-7a75365bf4a4"
+    ]
+  },
+  {
+    "query": "训练容量与频率：每个肌群每周练多少组",
+    "category": "title_recall",
+    "relevant_docs": [
+      "17956255-aa5c-4396-97b4-90c6dd390417",
+      "6c6fc97e-286b-4fa7-ad7e-b173f0b4bbe5"
+    ]
+  },
+  {
+    "query": "上下肢分化：每周四练的平衡方案",
+    "category": "title_recall",
+    "relevant_docs": [
+      "70dffe89-bc43-4bf4-bdde-0e15d188bd8d",
+      "eacba8e4-9cd0-44c7-a6de-f961b82043e7"
+    ]
+  },
+  {
+    "query": "素食者的蛋白质搭配：不靠肉也能练",
+    "category": "title_recall",
+    "relevant_docs": [
+      "c0462f00-8a2a-4450-8727-386c5cbab534",
+      "dbb70c31-208f-426f-b33e-a78ee5b204f0"
+    ]
+  },
+  {
+    "query": "训练前热身：从 5 分钟到 15 分钟的完整流程",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1fb0aba2-5116-4de1-b8bc-88810abaa9c7",
+      "8fad101b-a6a3-4c26-b8fe-f77bf990cdef"
+    ]
+  },
+  {
+    "query": "训练日志怎么记：让进步看得见",
+    "category": "title_recall",
+    "relevant_docs": [
+      "88605694-b212-43d6-896f-20dae78b32dc",
+      "b5220682-61b0-4883-a145-a58c42e2944a"
+    ]
+  },
+  {
+    "query": "手腕与肘部的日常保养：推拉动作的隐形代价",
+    "category": "title_recall",
+    "relevant_docs": [
+      "07a06069-fc72-4cd3-964e-d13ae08b6df6",
+      "be954967-6cf1-4ba4-9616-43fbef08688e"
+    ]
+  },
+  {
+    "query": "二区有氧：把心率压在能说话的区间",
+    "category": "title_recall",
+    "relevant_docs": [
+      "1ccc93f7-6179-4eb9-aa52-d82657731a3f",
+      "afd8f2dc-622f-4a2a-ab9a-a31150f8d825"
+    ]
+  }
+]

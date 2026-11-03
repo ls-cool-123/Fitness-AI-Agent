@@ -42,7 +42,10 @@ async def test_existing_thread_sends_only_latest_user_message(monkeypatch) -> No
     async def fake_aget_state(_config):
         return _State()
 
-    monkeypatch.setattr(chat_module.fitness_agent, "aget_state", fake_aget_state)
+    class _FakeAgent:
+        aget_state = staticmethod(fake_aget_state)
+
+    monkeypatch.setattr(chat_module, "get_agent", lambda: _FakeAgent())
 
     request = chat_module.ChatRequest(
         messages=[
@@ -82,7 +85,10 @@ async def test_history_grows_linearly_not_quadratically(monkeypatch) -> None:
     async def fake_aget_state(_config):
         return _State()
 
-    monkeypatch.setattr(chat_module.fitness_agent, "aget_state", fake_aget_state)
+    class _FakeAgent:
+        aget_state = staticmethod(fake_aget_state)
+
+    monkeypatch.setattr(chat_module, "get_agent", lambda: _FakeAgent())
 
     frontend_history: list[chat_module.ChatMessage] = []
     for i in range(turns):

@@ -30,8 +30,10 @@ async def rag_search_tool(
     - 恢复、伤病预防或活动度
     - 运动科学或运动生理学
 
-    此工具返回相关文档片段。请勿用它来记录训练或查询个人训练历史，
-    这些需求应使用 add_workout_tool 或 query_workout_tool。
+    此工具返回相关文档片段。请勿用它来记录训练、查询个人训练历史或**生成
+    具体训练计划**：记录训练用 add_workout_tool，查询历史用 query_workout_tool，
+    生成个人计划用 create_training_plan_tool。只有当用户问的是训练计划的
+    理论/原理（如"周期化训练为什么有效"）时才用本工具。
 
     Args:
         query: 要搜索的具体问题。
@@ -49,12 +51,15 @@ async def rag_search_tool(
 
         # 精排阶段：用 BGE/FlashRank 对粗筛结果重排序，返回 (docs, scores)
         if config.rerank_provider != "none":
+            # 只把前 N 条交给 Cross-Encoder：CPU 上重排 40 条要 30 秒以上，
+            # 而粗筛 16~40 名很少能翻盘，把候选压到 15 条是延迟与效果的折中
+            candidates = docs[: config.rerank_candidates]
             from agent.utils.reranker import get_reranker
             reranker = get_reranker(
                 provider=config.rerank_provider,
-                top_k=min(top_k, len(docs)),
+                top_k=min(top_k, len(candidates)),
             )
-            docs, scores = reranker(docs, query)
+            docs, scores = reranker(candidates, query)
 
             # 阈值过滤：丢弃低于阈值的 chunk，防止 LLM 基于低质量文本编造回答
             threshold = config.rerank_score_threshold

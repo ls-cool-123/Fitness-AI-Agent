@@ -1,3 +1,5 @@
+import type { PlanToolResult } from "@/types/plan";
+
 /**
  * 工具输出的类型建模。
  *
@@ -140,6 +142,7 @@ export type ToolResult =
   | WorkoutSessionDto[]
   | RagResult
   | MemoryResult
+  | PlanToolResult
   | null;
 
 // ---------------------------------------------------------------------------

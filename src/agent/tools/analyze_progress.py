@@ -15,21 +15,7 @@ from sqlalchemy import distinct, func, or_, select
 
 from agent.db.models import ExerciseCatalog, User, WorkoutItem, WorkoutSession
 from agent.db.mysql import async_session_factory
-
-
-def _resolve_user_id(user_id: str) -> uuid.UUID:
-    """将 user_id 字符串转换为确定性的 UUID。
-
-    支持两种输入形式：
-    - 标准 UUID 字符串：直接解析返回
-    - 普通用户名：通过 uuid5 确定性生成，同一用户名每次生成相同 UUID
-    """
-    # 情况 1：输入已是 UUID 格式
-    try:
-        return uuid.UUID(user_id)
-    # 情况 2：输入是普通用户名，用 uuid5 确定性映射为 UUID
-    except ValueError:
-        return uuid.uuid5(uuid.NAMESPACE_DNS, f"{user_id}@fitness-agent")
+from agent.utils.utility import resolve_user_id as _resolve_user_id
 
 
 def _exercise_rows_stmt(user_uuid: uuid.UUID, exercise_name: str, cutoff: date):

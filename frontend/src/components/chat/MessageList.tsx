@@ -1,6 +1,13 @@
 import { Dumbbell } from "lucide-react";
 
+import { PlanConfirmCard } from "@/components/chat/PlanConfirmCard";
+import { WorkoutConfirmCard } from "@/components/chat/WorkoutConfirmCard";
 import { ToolResultCard } from "@/components/chat/results";
+import type {
+  ConfirmEditPayload,
+  ConfirmStatus,
+  InterruptValue,
+} from "@/types/chat";
 import type { ToolResult } from "@/types/tools";
 
 /** 一条工具结果，按到达顺序挂在对应的助手消息上。 */
@@ -10,15 +17,32 @@ export interface ToolOutcome {
 }
 
 /**
+ * 挂在助手消息上的待确认操作。
+ *
+ * 数据是后端 interrupt 事件的原样载荷；status 是前端自己的生命周期，用于切换
+ * 卡片的可编辑 / loading / 终态，不会回传给后端。
+ */
+export interface UiConfirmation {
+  /** 后端 interrupt id，兼作 React key，多个中断同时存在时也能区分。 */
+  id: string | null;
+  value: InterruptValue;
+  status: ConfirmStatus;
+  /** 非 409 的请求失败文案；null 表示当前没有错误。 */
+  error: string | null;
+}
+
+/**
  * 界面上的一条消息。
  *
- * 比发给后端的 ChatMessage 多了 `results` —— 工具结果只活在前端，不进对话历史
- * （后端自己有 checkpointer，把卡片数据回传给它没有意义还会撑大 payload）。
+ * 比发给后端的 ChatMessage 多了 `results` 和 `confirmation` —— 工具结果和待确认
+ * 操作都只活在前端，不进对话历史（后端自己有 checkpointer，把卡片数据回传给它
+ * 没有意义还会撑大 payload）。
  */
 export interface UiMessage {
   role: "user" | "assistant";
   content: string;
   results?: ToolOutcome[];
+  confirmation?: UiConfirmation;
 }
 
 function Avatar() {
@@ -51,10 +75,18 @@ function Thinking() {
 export function MessageList({
   messages,
   streaming,
+  onConfirm,
+  onCancel,
 }: {
   messages: UiMessage[];
   /** 最后一条助手消息是否还在生成中 */
   streaming: boolean;
+  /** edits 是卡片当前数值（含用户修正）；取消时不传。 */
+  onConfirm: (
+    messageIndex: number,
+    edits: ConfirmEditPayload[],
+  ) => Promise<void>;
+  onCancel: (messageIndex: number) => Promise<void>;
 }) {
   return (
     <div className="space-y-5">
@@ -89,7 +121,32 @@ export function MessageList({
                 />
               ))}
 
-              {last && streaming && !msg.content ? <Thinking /> : null}
+              {msg.confirmation ? (
+                msg.confirmation.value.action === "confirm_workout" ? (
+                  <WorkoutConfirmCard
+                    // 中断 id 稳定标识一次确认；极端情况下同一消息上换了新中断也能重建卡片
+                    key={msg.confirmation.id ?? `confirm-${i}`}
+                    request={msg.confirmation.value}
+                    status={msg.confirmation.status}
+                    error={msg.confirmation.error}
+                    onConfirm={(edits) => onConfirm(i, edits)}
+                    onCancel={() => onCancel(i)}
+                  />
+                ) : (
+                  <PlanConfirmCard
+                    key={msg.confirmation.id ?? `confirm-plan-${i}`}
+                    request={msg.confirmation.value}
+                    status={msg.confirmation.status}
+                    error={msg.confirmation.error}
+                    onConfirm={(edits) => onConfirm(i, edits)}
+                    onCancel={() => onCancel(i)}
+                  />
+                )
+              ) : null}
+
+              {last && streaming && !msg.content && !msg.confirmation ? (
+                <Thinking />
+              ) : null}
             </div>
           </div>
         );

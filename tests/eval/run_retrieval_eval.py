@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import time
@@ -21,7 +22,6 @@ from pathlib import Path
 
 import numpy as np
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
-from loguru import logger
 
 from agent.utils.config import config
 from agent.utils.embeddings import get_embedding_model
@@ -33,19 +33,31 @@ EVAL_FILE = Path(__file__).parent / "eval_queries.json"
 with open(EVAL_FILE, encoding="utf-8") as f:
     EVAL_QUERIES = json.load(f)
 
-COLLECTION = "fitness_kb"
+DEFAULT_COLLECTION = "fitness_kb"
 RETRIEVAL_K = config.retrieval_k  # 粗筛条数 (40)
 TOP_K = 5  # 最终返回条数
+
+
+def load_queries(path: str | None) -> list[dict]:
+    """加载评测集；不传路径时用默认的 eval_queries.json。"""
+    if not path:
+        return EVAL_QUERIES
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 # ── 检索器工厂（绕过 retriever.py 缓存，为每个模式建独立实例）───
 
 
-def _make_retriever(mode: RetrievalMode, k: int = RETRIEVAL_K):
+def _make_retriever(
+    mode: RetrievalMode,
+    collection: str = DEFAULT_COLLECTION,
+    k: int = RETRIEVAL_K,
+):
     """按指定检索模式创建检索器，不走缓存。"""
     embedding = get_embedding_model(config)
     vdb = QdrantVectorStore(
         client=qdrant_client,
-        collection_name=COLLECTION,
+        collection_name=collection,
         embedding=embedding,
         sparse_embedding=sparse_embeddings,
         retrieval_mode=mode,
@@ -66,10 +78,17 @@ def dcg_at_k(relevance: list[int], k: int) -> float:
 
 
 def ndcg_at_k(relevant_ids: set[str], retrieved_ids: list[str], k: int) -> float:
-    """Normalized DCG at K（二值相关：相关=1，不相关=0）。"""
+    """Normalized DCG at K（二值相关：相关=1，不相关=0）。
+
+    IDCG 按"标注的相关文档数"计算（``min(len(relevant), k)``），这是标准口径：
+    如果实际有 5 条相关文档但只召回了 2 条，NDCG 应当因漏召回而被扣分。
+    早期版本把 IDCG 建在"已召回的命中数"上，等于不惩罚漏召回，会让 NDCG
+    在 Recall 下降时反而升高，面试时无法解释。
+    """
     rel = [1 if rid in relevant_ids else 0 for rid in retrieved_ids[:k]]
     dcg = dcg_at_k(rel, k)
-    ideal_rel = sorted(rel, reverse=True)
+    ideal_hits = min(len(relevant_ids), k)
+    ideal_rel = [1] * ideal_hits + [0] * (k - ideal_hits)
     idcg = dcg_at_k(ideal_rel, k)
     return dcg / idcg if idcg > 0 else 0.0
 
@@ -102,21 +121,20 @@ def mrr(relevant_ids: set[str], retrieved_ids: list[str]) -> float:
 # ── 评测主流程 ──────────────────────────────────────────────────────────
 
 
-def evaluate_mode(
-    mode_name: str,
+def _run_queries(
     retriever,
-    use_rerank: bool = False,
-) -> dict:
-    """对评测集中每条 query 检索并计算四项指标，返回均值。"""
+    use_rerank: bool,
+    queries: list[dict],
+) -> list[dict]:
+    """对每条 query 跑一遍检索，返回逐条指标。
+
+    只检索一次，总指标和分类指标都从这批结果里聚合——早期实现为了拿分类指标
+    会把整个评测集重新检索一遍，重排模式下等于多花一倍时间（实测 32 分钟）。
+    """
     reranker = get_reranker(provider=config.rerank_provider, top_k=TOP_K) if use_rerank else None
+    rows: list[dict] = []
 
-    recall_scores: list[float] = []
-    prec_scores: list[float] = []
-    mrr_scores: list[float] = []
-    ndcg_scores: list[float] = []
-    latencies: list[float] = []
-
-    for item in EVAL_QUERIES:
+    for item in queries:
         query = item["query"]
         relevant = set(item["relevant_docs"])
 
@@ -125,83 +143,78 @@ def evaluate_mode(
         retrieval_ms = (time.perf_counter() - t0) * 1000
 
         if use_rerank and reranker:
-            docs = reranker(docs, query)
+            # 与线上 rag_search_tool 一致：只把前 rerank_candidates 条交给重排
+            candidates = docs[: config.rerank_candidates]
+            # get_reranker 返回 (docs, scores) 元组，这里只取重排后的文档
+            docs, _scores = reranker(candidates, query)
         else:
             docs = docs[:TOP_K]
 
         retrieved_ids = [d.metadata.get("_id") or str(d.id) for d in docs]
+        rows.append(
+            {
+                "category": item.get("category", "unknown"),
+                "recall": recall_at_k(relevant, retrieved_ids, TOP_K),
+                "prec": precision_at_k(relevant, retrieved_ids, TOP_K),
+                "mrr": mrr(relevant, retrieved_ids),
+                "ndcg": ndcg_at_k(relevant, retrieved_ids, TOP_K),
+                "latency": retrieval_ms,
+            }
+        )
+    return rows
 
-        recall_scores.append(recall_at_k(relevant, retrieved_ids, TOP_K))
-        prec_scores.append(precision_at_k(relevant, retrieved_ids, TOP_K))
-        mrr_scores.append(mrr(relevant, retrieved_ids))
-        ndcg_scores.append(ndcg_at_k(relevant, retrieved_ids, TOP_K))
-        latencies.append(retrieval_ms)
 
+def _aggregate(rows: list[dict]) -> dict:
+    """把逐条指标聚合成一行总指标。"""
     return {
-        "召回率@5": round(np.mean(recall_scores), 4),
-        "精确率@5": round(np.mean(prec_scores), 4),
-        "平均倒数排名": round(np.mean(mrr_scores), 4),
-        "折损累计增益@5": round(np.mean(ndcg_scores), 4),
-        "平均延迟(ms)": round(np.mean(latencies), 1),
+        "召回率@5": round(float(np.mean([r["recall"] for r in rows])), 4),
+        "精确率@5": round(float(np.mean([r["prec"] for r in rows])), 4),
+        "平均倒数排名": round(float(np.mean([r["mrr"] for r in rows])), 4),
+        "折损累计增益@5": round(float(np.mean([r["ndcg"] for r in rows])), 4),
+        "平均延迟(ms)": round(float(np.mean([r["latency"] for r in rows])), 1),
     }
 
 
-# ── 按 category 细分评测 ─────────────────────────────────────────────────
+def evaluate(
+    mode_name: str,
+    retriever,
+    use_rerank: bool = False,
+    queries: list[dict] | None = None,
+) -> tuple[dict, dict]:
+    """单次检索同时产出总指标与分类指标。"""
+    eval_queries = queries if queries is not None else EVAL_QUERIES
+    rows = _run_queries(retriever, use_rerank, eval_queries)
 
+    by_category: dict[str, list[dict]] = {}
+    for row in rows:
+        by_category.setdefault(row["category"], []).append(row)
 
-def evaluate_by_category(mode_name: str, retriever, use_rerank: bool = False) -> dict:
-    """按 query 类别分别统计指标。"""
-    reranker = get_reranker(provider=config.rerank_provider, top_k=TOP_K) if use_rerank else None
-
-    categories: dict[str, dict[str, list[float]]] = {}
-
-    for item in EVAL_QUERIES:
-        cat = item["category"]
-        if cat not in categories:
-            categories[cat] = {"recall": [], "prec": [], "mrr": [], "ndcg": []}
-
-        query = item["query"]
-        relevant = set(item["relevant_docs"])
-
-        docs = retriever.invoke(query)
-        if use_rerank and reranker:
-            docs = reranker(docs, query)
-        else:
-            docs = docs[:TOP_K]
-
-        retrieved_ids = [d.metadata.get("_id") or str(d.id) for d in docs]
-
-        categories[cat]["recall"].append(recall_at_k(relevant, retrieved_ids, TOP_K))
-        categories[cat]["prec"].append(precision_at_k(relevant, retrieved_ids, TOP_K))
-        categories[cat]["mrr"].append(mrr(relevant, retrieved_ids))
-        categories[cat]["ndcg"].append(ndcg_at_k(relevant, retrieved_ids, TOP_K))
-
-    result = {}
-    for cat, scores in categories.items():
-        result[cat] = {
-            "召回率@5": round(np.mean(scores["recall"]), 4),
-            "精确率@5": round(np.mean(scores["prec"]), 4),
-            "平均倒数排名": round(np.mean(scores["mrr"]), 4),
-            "折损累计增益@5": round(np.mean(scores["ndcg"]), 4),
-        }
-    return result
+    detail = {cat: _aggregate(cat_rows) for cat, cat_rows in by_category.items()}
+    return _aggregate(rows), detail
 
 
 # ── 主入口 ──────────────────────────────────────────────────────────────
 
 
-def main():
+def main(
+    collection: str = DEFAULT_COLLECTION,
+    queries: list[dict] | None = None,
+    skip_rerank: bool = False,
+    skip_flashrank: bool = False,
+    rerank_provider_override: str = "",
+) -> dict:
+    eval_queries = queries if queries is not None else EVAL_QUERIES
     print("\n" + "=" * 80)
-    print("  健身知识库 (fitness_kb) 检索质量评测")
-    print(f"  评测集: {len(EVAL_QUERIES)} 条 query | 知识库: {COLLECTION} (16 docs)")
+    print("  健身知识库检索质量评测")
+    print(f"  评测集: {len(eval_queries)} 条 query | 知识库: {collection}")
     print(f"  粗筛: {RETRIEVAL_K} 条 → 最终返回: {TOP_K} 条")
     print("=" * 80)
 
     # ── 构建四种检索器 ──
     print("\n初始化检索器...")
-    dense_retriever = _make_retriever(RetrievalMode.DENSE)
-    sparse_retriever = _make_retriever(RetrievalMode.SPARSE)
-    hybrid_retriever = _make_retriever(RetrievalMode.HYBRID)
+    dense_retriever = _make_retriever(RetrievalMode.DENSE, collection)
+    sparse_retriever = _make_retriever(RetrievalMode.SPARSE, collection)
+    hybrid_retriever = _make_retriever(RetrievalMode.HYBRID, collection)
 
     # ── 运行五项实验 ──
     experiments = [
@@ -211,20 +224,34 @@ def main():
         ("D. Hybrid+FlashRank", hybrid_retriever, True, "flashrank"),
         ("E. Hybrid+BGE", hybrid_retriever, True, "bge"),
     ]
+    if skip_rerank:
+        experiments = experiments[:3]
+    elif skip_flashrank:
+        experiments = [e for e in experiments if not e[0].startswith("D")]
+
+    # 允许把 E 那一档换成别的重排器（例如远程的 siliconflow），
+    # 这样同一份 query 可以在"本地 BGE / 远程 BGE"之间直接对比
+    if rerank_provider_override:
+        experiments = [
+            (f"E. Hybrid+{rerank_provider_override}", hybrid_retriever, True, rerank_provider_override)
+            if e[0].startswith("E")
+            else e
+            for e in experiments
+        ]
 
     overall_results = {}
     detail_results = {}
 
     for name, retriever, use_rerank, rerank_provider in experiments:
         print(f"\n  评测 {name} ...", end=" ", flush=True)
-        # 临时设置 rerank_provider，保证 evaluate_mode 和 evaluate_by_category 使用同一个
+        # 临时设置 rerank_provider，让本次实验使用指定的重排器
         orig_provider = config.rerank_provider
         if rerank_provider:
             config.rerank_provider = rerank_provider
 
         t0 = time.perf_counter()
-        result = evaluate_mode(name, retriever, use_rerank=use_rerank)
-        detail = evaluate_by_category(name, retriever, use_rerank=use_rerank)
+        # 一次检索同时拿到总指标和分类指标（早期版本跑两遍，重排模式下慢一倍）
+        result, detail = evaluate(name, retriever, use_rerank=use_rerank, queries=eval_queries)
         elapsed = time.perf_counter() - t0
 
         # 恢复原值
@@ -297,7 +324,58 @@ def main():
     print("\n" + "=" * 80)
     print("  评测完成。")
     print("=" * 80 + "\n")
+    return overall_results
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="检索质量评测（支持多 collection 对照）")
+    parser.add_argument(
+        "--collection",
+        default=DEFAULT_COLLECTION,
+        help="要评测的 Qdrant 集合，如 fitness_kb_b0 / fitness_kb_b1 / fitness_kb_b2",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="把结果写入 JSON 文件，便于多组实验汇总对比",
+    )
+    parser.add_argument(
+        "--eval-file",
+        default=None,
+        help="自定义评测集 JSON（默认 tests/eval/eval_queries.json）",
+    )
+    parser.add_argument(
+        "--skip-rerank",
+        action="store_true",
+        help="只跑 A/B/C 三种检索模式（离线环境下不加载 BGE/FlashRank 模型）",
+    )
+    parser.add_argument(
+        "--skip-flashrank",
+        action="store_true",
+        help="跳过多余的 FlashRank 对照（已知中文场景失效，且需要额外下载模型）",
+    )
+    parser.add_argument(
+        "--rerank-provider",
+        default="",
+        help="把重排那一档换成指定 provider（bge / siliconflow），用于本地与远程对比",
+    )
+    args = parser.parse_args()
+    results = main(
+        collection=args.collection,
+        queries=load_queries(args.eval_file),
+        skip_rerank=args.skip_rerank,
+        skip_flashrank=args.skip_flashrank,
+        rerank_provider_override=args.rerank_provider,
+    )
+    if args.output:
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {"collection": args.collection, "results": results},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        print(f"结果已写入 {output_path}")

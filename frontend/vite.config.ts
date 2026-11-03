@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 // 开发时把后端前缀代理到 FastAPI，让前端与后端同源 —— 后端没有 CORS 中间件，
 // 同源代理省掉了加它的必要。生产环境由 nginx 做同样的事（见 Dockerfile.frontend）。
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8001";
-const BACKEND_PREFIXES = ["/chat", "/workout", "/documents"];
+const BACKEND_PREFIXES = ["/chat", "/workout", "/documents", "/plan"];
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

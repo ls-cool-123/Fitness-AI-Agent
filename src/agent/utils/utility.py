@@ -16,6 +16,40 @@ from loguru import logger
 from agent.data_model.internal_model import RetrievalResults
 
 
+def resolve_user_id(user_id: str) -> uuid.UUID:
+    """把 user_id 字符串确定性地映射成 UUID。
+
+    支持两种输入：
+    - 标准 UUID 字符串：直接解析；
+    - 普通用户名：uuid5 确定性生成，同一用户名每次得到同一 UUID。
+
+    Args:
+        user_id: 前端传入的用户标识（UUID 或用户名）。
+
+    Returns:
+        用于数据库外键的 UUID。
+    """
+    try:
+        return uuid.UUID(user_id)
+    except ValueError:
+        return uuid.uuid5(uuid.NAMESPACE_DNS, f"{user_id}@fitness-agent")
+
+
+def get_graph_thread_id() -> str | None:
+    """返回当前 LangGraph 线程 id；不在图中运行时返回 None。
+
+    直接调用工具（如 ``POST /workout/add`` 或 ``POST /plan/generate``）同样
+    产生一个 runnable config，但它没有 ``thread_id``，不能 interrupt。
+    """
+    try:
+        from langgraph.config import get_config  # noqa: PLC0415
+
+        run_config = get_config()
+    except Exception:  # noqa: BLE001 - 不在 runnable context 内
+        return None
+    return (run_config.get("configurable") or {}).get("thread_id")
+
+
 def combine_text_from_list(input_list: list) -> str:
     """将字符串列表合并为一个字符串。
 

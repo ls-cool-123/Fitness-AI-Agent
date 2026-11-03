@@ -1,5 +1,13 @@
-import { BarChart3, Dumbbell, MessageSquare, Moon, Sun, UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  BarChart3,
+  Dumbbell,
+  MessageSquare,
+  Moon,
+  PersonStanding,
+  Sun,
+  UserRound,
+} from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -9,6 +17,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuickLogForm } from "@/components/workout/QuickLogForm";
+
+// Three.js 包体较大，只有切到「人体图」时才加载
+const PlanStudio = lazy(() =>
+  import("@/components/plan/PlanStudio").then((module) => ({
+    default: module.PlanStudio,
+  })),
+);
 
 const USER_ID_KEY = "fitness.userId";
 
@@ -32,6 +47,7 @@ export default function App() {
     () => localStorage.getItem(USER_ID_KEY) ?? "default-user",
   );
   const { theme, toggle } = useTheme();
+  const [tab, setTab] = useState("chat");
 
   useEffect(() => {
     localStorage.setItem(USER_ID_KEY, userId);
@@ -71,11 +87,15 @@ export default function App() {
       </header>
 
       <div className="grid flex-1 items-start gap-4 lg:grid-cols-[1fr_20rem]">
-        <Tabs defaultValue="chat" className="min-w-0">
+        <Tabs value={tab} onValueChange={setTab} className="min-w-0">
           <TabsList className="mb-3">
             <TabsTrigger value="chat">
               <MessageSquare />
               对话
+            </TabsTrigger>
+            <TabsTrigger value="plan">
+              <PersonStanding />
+              人体图
             </TabsTrigger>
             <TabsTrigger value="dashboard">
               <BarChart3 />
@@ -83,10 +103,30 @@ export default function App() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat">
+          {/* forceMount：聊天记录存在 ChatPanel 内部 state 里，切标签时标签页
+              默认会卸载内容导致记录丢失，这里保持挂载（未激活时 Radix 自动
+              hidden），切回对话时记录和进行中的流式回复都还在。 */}
+          <TabsContent value="chat" forceMount>
             <Card className="h-[calc(100vh-12rem)] px-4 py-1">
-              <ChatPanel userId={userId} />
+              <ChatPanel
+                userId={userId}
+                onOpenPlan={() => setTab("plan")}
+              />
             </Card>
+          </TabsContent>
+
+          <TabsContent value="plan">
+            <div className="min-h-[42rem]">
+              <Suspense
+                fallback={
+                  <div className="rounded-xl border border-hairline bg-card px-4 py-6 text-sm text-ink-2">
+                    正在加载人体图与动作库…
+                  </div>
+                }
+              >
+                <PlanStudio userId={userId} />
+              </Suspense>
+            </div>
           </TabsContent>
 
           <TabsContent value="dashboard">

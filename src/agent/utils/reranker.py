@@ -15,7 +15,7 @@ from loguru import logger
 if TYPE_CHECKING:
     from flashrank import Ranker
 
-RerankerProvider = Literal["bge", "flashrank", "none"]
+RerankerProvider = Literal["bge", "flashrank", "siliconflow", "none"]
 
 # ── BGE Reranker (多语言, 中文友好) ────────────────────────────────────
 
@@ -23,15 +23,20 @@ _bge_ranker = None  # sentence_transformers CrossEncoder
 
 
 def _get_bge_ranker():
-    """Get or create cached BGE reranker via sentence-transformers CrossEncoder."""
+    """Get or create cached BGE reranker via sentence-transformers CrossEncoder.
+
+    配置了 ``BGE_RERANKER_PATH`` 时直接加载本地目录，跳过 HuggingFace 下载；
+    离线/内网环境下这是唯一能跑通的方式。
+    """
     global _bge_ranker
     if _bge_ranker is None:
         from sentence_transformers import CrossEncoder  # noqa: PLC0415
 
-        _bge_ranker = CrossEncoder(
-            "BAAI/bge-reranker-v2-m3",
-        )
-        logger.info("BGE-reranker-v2-m3 model loaded and cached")
+        from agent.utils.config import config  # noqa: PLC0415
+
+        model = config.bge_reranker_path or "BAAI/bge-reranker-v2-m3"
+        _bge_ranker = CrossEncoder(model)
+        logger.info(f"BGE-reranker-v2-m3 model loaded and cached ({model})")
     return _bge_ranker
 
 
@@ -75,6 +80,48 @@ def rerank_with_bge(
 
     logger.info(f"BGE reranked {len(documents)} documents to top {len(reranked_docs)}")
     return reranked_docs, reranked_scores
+
+
+# ── 远程重排：硅基流动（BAAI/bge-reranker-v2-m3，免费）────────────────
+#
+# 本机 CPU 跑 BGE 重排 40 条要 30 秒以上，线上不可用。硅基流动把这个模型
+# 免费开放，接口是 Jina/Cohere 风格的 /rerank（不是 OpenAI 的 chat 协议）：
+#   POST {base}/rerank {model, query, documents: [...], top_n}
+
+
+def rerank_with_siliconflow(
+    documents: list[Document], query: str, top_k: int
+) -> tuple[list[Document], list[float]]:
+    """通过硅基流动的 /rerank 接口重排，返回 (docs, 归一化分数)。"""
+    import httpx  # noqa: PLC0415
+
+    from agent.utils.config import config  # noqa: PLC0415
+
+    if not documents:
+        return documents, []
+    if not config.rerank_api_key:
+        msg = "RERANK_API_KEY 未配置，无法使用 siliconflow 重排。"
+        raise ValueError(msg)
+
+    response = httpx.post(
+        f"{config.rerank_api_base.rstrip('/')}/rerank",
+        headers={"Authorization": f"Bearer {config.rerank_api_key}"},
+        json={
+            "model": config.rerank_api_model,
+            "query": query,
+            "documents": [doc.page_content for doc in documents],
+            "top_n": min(top_k, len(documents)),
+            "return_documents": False,
+        },
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    results = response.json().get("results") or []
+
+    ranked_docs = [documents[item["index"]] for item in results]
+    ranked_scores = [float(item["relevance_score"]) for item in results]
+    logger.info(f"SiliconFlow reranked {len(documents)} documents to top {len(ranked_docs)}")
+    return ranked_docs, ranked_scores
 
 
 # ── FlashRank Reranker (英文 only, 保留作为对比基线) ──────────────────
@@ -155,6 +202,9 @@ def get_reranker(
 
         case "bge":
             return lambda docs, query: rerank_with_bge(docs, query, top_k)
+
+        case "siliconflow":
+            return lambda docs, query: rerank_with_siliconflow(docs, query, top_k)
 
         case _:
             msg = f"Unknown reranker provider: {provider}"

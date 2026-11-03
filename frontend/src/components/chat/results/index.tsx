@@ -1,5 +1,6 @@
 import { Inbox } from "lucide-react";
 
+import { isPlanToolResult } from "@/types/plan";
 import type { ToolResult } from "@/types/tools";
 import {
   isMemoryItems,
@@ -16,6 +17,7 @@ import { CategoryCard } from "./CategoryCard";
 import { MemoryList } from "./MemoryList";
 import { ProgressCard } from "./ProgressCard";
 import { RagSources } from "./RagSources";
+import { TrainingPlanResultCard } from "./TrainingPlanResultCard";
 import { WorkoutTable } from "./WorkoutTable";
 
 /** 查无结果时的一行轻提示 —— 不占一整张卡片，LLM 的文字回答才是主角。 */
@@ -69,6 +71,12 @@ export function ToolResultCard({
     case "recall_memories_tool":
       if (!isMemoryItems(result)) return null;
       return result.length ? <MemoryList memories={result} /> : null;
+
+    case "create_training_plan_tool":
+    case "update_training_plan_tool":
+      // needs_info / cancelled 不渲染卡片，交给 LLM 文字继续追问/告知
+      if (!isPlanToolResult(result) || result.status !== "saved") return null;
+      return <TrainingPlanResultCard plan={result.plan} />;
 
     default:
       return null;

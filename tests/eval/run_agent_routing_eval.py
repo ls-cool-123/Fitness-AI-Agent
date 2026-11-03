@@ -14,7 +14,7 @@ import json
 import time
 from pathlib import Path
 
-from agent.agent.fitness_agent import fitness_agent
+from agent.agent.fitness_agent import get_agent
 from agent.tools import current_user_id
 
 EVAL_FILE = Path(__file__).parent / "eval_agent_queries.json"
@@ -35,7 +35,7 @@ async def run_one_query(query: str, user_id: str) -> tuple[list[str], str]:
 
     token = current_user_id.set(user_id)
     try:
-        async for event in fitness_agent.astream_events(
+        async for event in get_agent().astream_events(
             {"messages": [{"role": "user", "content": query}]},
             config=config,
             version="v2",
@@ -142,6 +142,8 @@ async def main():
         "query_workout_tool": {"tp": 0, "fp": 0, "fn": 0},
         "analyze_progress_tool": {"tp": 0, "fp": 0, "fn": 0},
         "rag_search_tool": {"tp": 0, "fp": 0, "fn": 0},
+        "create_training_plan_tool": {"tp": 0, "fp": 0, "fn": 0},
+        "update_training_plan_tool": {"tp": 0, "fp": 0, "fn": 0},
     }
     for r, q in zip(results, queries):
         exp = set(q["expected_tools"])

@@ -17,10 +17,9 @@ from http import HTTPStatus
 
 import pytest
 
-# 将本文件内的所有测试标记为 integration 类型
-# 运行 pytest -m integration 时只执行这些测试
-# 运行 pytest -m "not integration" 时跳过它们
-pytestmark = pytest.mark.integration
+# 这个测试会启动完整的 FastAPI lifespan（含 MySQL 建表/种子），必须有真实
+# MySQL 才能跑，因此归为 e2e；`make test` 用 -m "not e2e" 跳过它。
+pytestmark = pytest.mark.e2e
 
 
 def test_read_root(client) -> None:

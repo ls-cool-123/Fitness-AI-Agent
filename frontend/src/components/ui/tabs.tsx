@@ -45,7 +45,9 @@ export function TabsContent({
 }: ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content
-      className={cn("outline-none", className)}
+      // forceMount 的内容（聊天）在非激活时 Radix 不会自动加 hidden，
+      // 必须用 data-state 手动隐藏，否则切到其他 tab 后聊天面板仍占满高度。
+      className={cn("outline-none data-[state=inactive]:hidden", className)}
       {...props}
     />
   );

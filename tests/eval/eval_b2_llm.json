@@ -1,0 +1,542 @@
+[
+  {
+    "query": "我增肌减脂一起练，力量后做20到30分钟低强度有氧，心率控制在多少合适？",
+    "category": "cardio",
+    "source": "cardio-before-after-weights.md",
+    "relevant_docs": [
+      "1b383719-5ce0-45cb-aaa5-f7b337808c98",
+      "1eae18a8-1d61-46f4-8dd3-18666664013d"
+    ]
+  },
+  {
+    "query": "我明早想空腹快走，该喝多少水、心率压到多少，练完多久吃早餐？",
+    "category": "fasted",
+    "source": "fasted-cardio.md",
+    "relevant_docs": [
+      "2942b81a-d7b2-4249-9f57-5528eed925df",
+      "a9c17d8a-979d-449a-9715-deb1332ea6f3"
+    ]
+  },
+  {
+    "query": "我主要想减脂，一周LISS和HIIT各安排几次、每次多久合适？",
+    "category": "hiit",
+    "source": "hiit-vs-liss.md",
+    "relevant_docs": [
+      "d817c01e-633b-44ea-bb10-0c63a93c5bf4",
+      "f406fdf8-e2ba-4649-828d-cf5e698659c6"
+    ]
+  },
+  {
+    "query": "跑步机坡度设多少、速度多快，走多久适合入门？",
+    "category": "incline",
+    "source": "incline-walk-stairs.md",
+    "relevant_docs": [
+      "4d476df9-4b39-476c-8279-ad8b136f2e02",
+      "ab04c8fc-c041-4c0e-bc02-dadfc567c4ec"
+    ]
+  },
+  {
+    "query": "我刚开始跳，每次总共跳几分钟、分几轮练比较稳妥？",
+    "category": "jump",
+    "source": "jump-rope-basics.md",
+    "relevant_docs": [
+      "760f4d19-b93a-4339-8521-247d203a4327",
+      "bbed1efc-ff86-4c56-bc9a-ab2de0c33d46"
+    ]
+  },
+  {
+    "query": "我划船时桨频保持多少合适，回程和拉桨的比例是几比几呀？",
+    "category": "rowing",
+    "source": "rowing-machine-form.md",
+    "relevant_docs": [
+      "9680abf8-8b7b-48f0-9171-301f3f709e5f",
+      "9d9cb1fb-0912-463d-a34b-0fbbe68adc0c"
+    ]
+  },
+  {
+    "query": "刚开始跑，轻松跑的配速一般比5公里比赛配速慢多少呀？",
+    "category": "running",
+    "source": "running-pace-heart-rate.md",
+    "relevant_docs": [
+      "7a840a5b-940f-46ea-9419-6f5d613bf913",
+      "e4266924-1dd5-49b1-bb4b-28e80a96e2ed"
+    ]
+  },
+  {
+    "query": "我30岁，二区心率大概控在多少，每次练多久、一周几次比较合适？",
+    "category": "zone",
+    "source": "zone-2-training.md",
+    "relevant_docs": [
+      "8b6cd78d-3976-4dd1-9a1d-e8fb2fe40793",
+      "fe7f5371-7d7c-4790-8596-0b52e1ed9b17"
+    ]
+  },
+  {
+    "query": "休息日想喝点酒，前后离训练各要隔多久，喝多少算没超量？",
+    "category": "alcohol",
+    "source": "alcohol-and-training.md",
+    "relevant_docs": [
+      "3ff7964f-dbcc-462a-ba00-edb999d42369",
+      "a260d2af-06f8-49a5-8907-79e852d05259"
+    ]
+  },
+  {
+    "query": "我按每公斤2.0到2.2克吃蛋白，碳水是不是优先放训练前后？",
+    "category": "body",
+    "source": "body-recomposition.md",
+    "relevant_docs": [
+      "2638feea-0e78-4638-a1da-5cc9d301f11c",
+      "4977b32d-b66d-4035-8cbe-37694a84e265"
+    ]
+  },
+  {
+    "query": "我连续记了7天饮食，体重两周没变，那减脂起步每天该少摄入多少千卡呀？",
+    "category": "calorie",
+    "source": "calorie-deficit-setup.md",
+    "relevant_docs": [
+      "2ef97854-d194-41a7-b347-ee64e10ddd79",
+      "733b93d0-f7ee-47a5-95f1-9e9a17c84dda"
+    ]
+  },
+  {
+    "query": "我一周练4次，训练日和休息日碳水各按每公斤体重吃几克呀？",
+    "category": "carb",
+    "source": "carb-cycling-guide.md",
+    "relevant_docs": [
+      "66200dcd-54a2-406d-92e2-345a1a473568",
+      "fb4a3b5d-b89b-4c5f-aabe-58f15a7d1516"
+    ]
+  },
+  {
+    "query": "我准备每周吃一顿自由餐，当天另外两餐咋安排，吃完要不要节食或加练？",
+    "category": "cheat",
+    "source": "cheat-meal-mindset.md",
+    "relevant_docs": [
+      "0283201f-be2b-4e58-b763-acb93998c92d",
+      "e8186019-5279-4e52-b3db-003ecf7cfab5"
+    ]
+  },
+  {
+    "query": "我70公斤减脂期，每天脂肪最少吃到多少克才不影响激素和恢复？",
+    "category": "fat",
+    "source": "fat-intake-importance.md",
+    "relevant_docs": [
+      "4757762f-a299-4045-83db-bb196f9a1350",
+      "6b8bac2b-f076-4a0c-bdc9-5b8167e671ea"
+    ]
+  },
+  {
+    "query": "我平时蔬菜吃得少，想加纤维，是不是先从每天多一份绿叶菜开始，过两周再改主食？",
+    "category": "fiber",
+    "source": "fiber-and-gut-health.md",
+    "relevant_docs": [
+      "49e183b5-9ee3-4dc4-a8ab-8583804d1f22",
+      "8f94384f-e17d-4a36-bba6-8e0760fa3008"
+    ]
+  },
+  {
+    "query": "我总记不住，训练前两小时和十五分钟分别该喝多少水呀？",
+    "category": "hydration",
+    "source": "hydration-electrolytes.md",
+    "relevant_docs": [
+      "290d08f8-675f-4732-a25f-27a602bc3f92",
+      "76957944-d413-42eb-8cb1-fa9f3a217eb8"
+    ]
+  },
+  {
+    "query": "外食多又没整块时间，三餐蛋白质早中晚分别吃多少克更合适？",
+    "category": "meal",
+    "source": "meal-frequency-satiety.md",
+    "relevant_docs": [
+      "3c66759a-4618-470d-b659-367e0f8ecc5a",
+      "a4c6163b-7174-4ae2-a6d1-4dcb123f6487"
+    ]
+  },
+  {
+    "query": "标签写一份30克150千卡、整包3份，那我全吃完得按多少千卡算？",
+    "category": "nutrition",
+    "source": "nutrition-label-reading.md",
+    "relevant_docs": [
+      "2ed4a376-e4dc-4102-9a20-7840276f35b9",
+      "4212af2f-8310-4e3e-88c8-38204f79b2a4"
+    ]
+  },
+  {
+    "query": "我练前两个半小时吃100克米饭配鸡胸，脂肪控制在多少克以内合适？",
+    "category": "pre",
+    "source": "pre-workout-meal-timing.md",
+    "relevant_docs": [
+      "1c6c825b-7d3c-4ffd-931d-1fda3b0e548b",
+      "395623d1-552f-453d-a3c7-9f07d4431e7e"
+    ]
+  },
+  {
+    "query": "我70公斤减脂期，一天蛋白大概吃多少克，每餐最少补多少？",
+    "category": "protein",
+    "source": "protein-intake-basics.md",
+    "relevant_docs": [
+      "750a53f6-9157-42b0-b791-a038ab013751",
+      "7eed7b73-882e-4d13-a7f8-69fb0a775223"
+    ]
+  },
+  {
+    "query": "减脂卡住时，饮食休息一般吃回维持热量几天，训练量要降到多少？",
+    "category": "refeed",
+    "source": "refeed-and-diet-break.md",
+    "relevant_docs": [
+      "28dee161-02c0-4e32-9c01-2cc41b88ee3c",
+      "a42f2926-c368-4fa8-9ae0-0f47179dab1b"
+    ]
+  },
+  {
+    "query": "我每天蛋白吃不够，按体重每公斤补到多少克比较合适？",
+    "category": "supplement",
+    "source": "supplement-priority.md",
+    "relevant_docs": [
+      "14fd9f3a-301f-4695-aced-4fbb11bacb46",
+      "5edf4f37-6957-4a6d-a8d3-12cd5d6c75d1"
+    ]
+  },
+  {
+    "query": "我平时纯素增肌，每天蛋白质到底按每公斤体重多少克来吃呀？",
+    "category": "vegetarian",
+    "source": "vegetarian-protein-sources.md",
+    "relevant_docs": [
+      "01f9e7e8-8523-4667-ad94-a2b860a2a9e1",
+      "7f4183db-185a-44a3-9da3-f34fb586deb0"
+    ]
+  },
+  {
+    "query": "我每次都能做完5×5的话，深蹲下次是加2.5还是5公斤呀？",
+    "category": "beginner",
+    "source": "beginner-5x5-plan.md",
+    "relevant_docs": [
+      "351e8f00-a0d9-4966-a043-ffc72e6fb80c",
+      "aa5450ff-10e3-4eb0-aa83-d50ec689146a"
+    ]
+  },
+  {
+    "query": "我减脂期每周有氧3次、每次30分钟，力量训练量还得降到原来的七八成吗？",
+    "category": "bulk",
+    "source": "bulk-cut-cycles.md",
+    "relevant_docs": [
+      "2e763709-e97e-4d8a-b9e2-3811b2c0be3f",
+      "c680aee6-ad8d-48f6-8671-2a64155a1499"
+    ]
+  },
+  {
+    "query": "我下周想减载，深蹲重量不变时组数和RPE该咋定？",
+    "category": "deload",
+    "source": "deload-week.md",
+    "relevant_docs": [
+      "27406821-0289-4b2a-82b5-5b41a2931d9d",
+      "670f3174-9e22-405b-b336-54bc79735bcc"
+    ]
+  },
+  {
+    "query": "我周一三五练全身，每次五六个动作，主项那四组要放在最前面做吗？",
+    "category": "full",
+    "source": "full-body-three-day.md",
+    "relevant_docs": [
+      "51be6c69-84f7-478c-8376-d82023b51ebe",
+      "d4b18045-1119-4e0f-8b71-7b6ab66ee645"
+    ]
+  },
+  {
+    "query": "我停滞三周了，先睡够7–9小时、蛋白吃到每公斤2克，观察两周再改训练吗？",
+    "category": "plateau",
+    "source": "plateau-breaking.md",
+    "relevant_docs": [
+      "4f63cef5-e06c-4029-a299-6d7bf4181b8c",
+      "aa1b78ca-8cd3-4093-a934-ae3f010a0689"
+    ]
+  },
+  {
+    "query": "我每周六练，每个肌群一周做多少组比较合适？",
+    "category": "push",
+    "source": "push-pull-legs.md",
+    "relevant_docs": [
+      "3b034ae1-77b0-403d-bdcd-e897badbdefe",
+      "c36c6b7a-7106-4b6c-9d7d-6d42b9007cb6"
+    ]
+  },
+  {
+    "query": "胸每周13组，分两次练，这样是不是落在12–16组的目标里？",
+    "category": "training",
+    "source": "training-volume-frequency.md",
+    "relevant_docs": [
+      "a8e9dda1-7b8f-497a-b9fb-f581910970d0",
+      "b05c515e-b7f4-4df1-8660-f02432b966e7"
+    ]
+  },
+  {
+    "query": "我一周练四天，上肢日推和拉的动作、组数次数该怎么安排？",
+    "category": "upper",
+    "source": "upper-lower-split.md",
+    "relevant_docs": [
+      "b561108b-3c9e-4616-80b5-c37ad3c0fcd6",
+      "e0f75724-f5f1-4580-971e-2b01006661f3"
+    ]
+  },
+  {
+    "query": "深蹲日正式组前，空杠和40%、60%、80%重量各做几次呀？",
+    "category": "warmup",
+    "source": "warmup-protocol.md",
+    "relevant_docs": [
+      "1e79227f-75c8-40cc-957f-5cf2f9b85708",
+      "43da649e-8acc-4fb9-b576-520aaa5ac6fb"
+    ]
+  },
+  {
+    "query": "每周日那5分钟统计总容量，是不是按组数×次数×重量来算？",
+    "category": "workout",
+    "source": "workout-logging.md",
+    "relevant_docs": [
+      "17fd248b-4eec-481c-8905-7c8f0287fc0a",
+      "632159e6-e773-4fdd-b3e6-ab38b88c1d30"
+    ]
+  },
+  {
+    "query": "我深蹲后第二天酸得厉害，散步多久、骑车多久算低强度活动？",
+    "category": "delayed",
+    "source": "delayed-onset-muscle-soreness.md",
+    "relevant_docs": [
+      "21573299-cd01-49e8-8f65-5b5c0ac9b07c",
+      "e520aebf-b484-4f12-82b8-6d8612dd7dfb"
+    ]
+  },
+  {
+    "query": "训练前用泡沫轴滚多久合适，每个部位大概多少秒？",
+    "category": "foam",
+    "source": "foam-rolling-guide.md",
+    "relevant_docs": [
+      "7b2eee50-3898-45c8-94ed-69d398b19832",
+      "bb1dbc25-c3c7-46b4-bd21-32939d54995c"
+    ]
+  },
+  {
+    "query": "退热一天后能散步吗？大概走多久、心率控制在多少合适？",
+    "category": "illness",
+    "source": "illness-return-to-training.md",
+    "relevant_docs": [
+      "191402e9-d5f4-4a38-889d-fbb677cdc0fc",
+      "3057cbd2-f8f0-48fa-a33f-388bc44f7154"
+    ]
+  },
+  {
+    "query": "我跑完膝盖前面疼，跑量先减多少合适？力量训练每周练几次呀？",
+    "category": "knee",
+    "source": "knee-pain-running.md",
+    "relevant_docs": [
+      "537ac042-e888-4045-a445-50d188b8c1c8",
+      "a2817504-afa0-4c7a-b7a8-5a63d82a6279"
+    ]
+  },
+  {
+    "query": "硬拉前那2–3组轻重量，具体怎么用来建立腹内压，起杠前又该怎么吸气？",
+    "category": "lower",
+    "source": "lower-back-protection.md",
+    "relevant_docs": [
+      "01e5adea-e6ee-4db9-9576-88fd4ff59681",
+      "a9752ac7-2a1e-4dc8-8465-1c127cf6da5a"
+    ]
+  },
+  {
+    "query": "晨起静息心率比平时高5到10次，还连着两周，训练量要减到几成？",
+    "category": "overtraining",
+    "source": "overtraining-signs.md",
+    "relevant_docs": [
+      "767c6b9b-f431-4de6-b411-74f321c06a9d",
+      "aaaf88dc-aeb8-4e0e-82ce-be1ef6389ff5"
+    ]
+  },
+  {
+    "query": "我每周练三次，非训练日散步二三十分钟够吗，大概走多少步？",
+    "category": "rest",
+    "source": "rest-day-planning.md",
+    "relevant_docs": [
+      "5de06403-2a77-487c-ba5f-005c2975a30a",
+      "e097f43a-6cc3-45d9-bdfb-7af62365b165"
+    ]
+  },
+  {
+    "query": "卧推前肩有点不舒服，热身时弹力带外旋该选多大阻力、做几组几次呀？",
+    "category": "rotator",
+    "source": "rotator-cuff-strengthening.md",
+    "relevant_docs": [
+      "82215a7a-7bf3-4553-be8f-2473890fbf9a",
+      "970c31cd-2860-4b30-9c92-8f37c6fd57e7"
+    ]
+  },
+  {
+    "query": "我经常练到很晚，睡前多久得结束训练才不影响入睡？",
+    "category": "sleep",
+    "source": "sleep-and-muscle-recovery.md",
+    "relevant_docs": [
+      "733538ec-528c-48ba-8184-4d3d11d212e1",
+      "f90a156d-ee13-4515-84e4-2c32443be6fb"
+    ]
+  },
+  {
+    "query": "压力大那周，训练量降到平时六七成、强度不变，这样安排对吗？",
+    "category": "stress",
+    "source": "stress-and-recovery.md",
+    "relevant_docs": [
+      "2b574b2a-7f38-42cd-adec-393b4637a9bd",
+      "462e61bb-01f6-4813-aecc-89fad590a686"
+    ]
+  },
+  {
+    "query": "训练后静态拉伸每个部位做几组、每次保持多久呀？",
+    "category": "stretching",
+    "source": "stretching-timing.md",
+    "relevant_docs": [
+      "50d721d0-8ff2-4695-a61a-b89ce9f079ff",
+      "bfe104b9-b449-4392-91bb-ceef97b1ef5c"
+    ]
+  },
+  {
+    "query": "我卧推后手腕不舒服，杠铃到底该落在掌根还是掌指关节呀？",
+    "category": "wrist",
+    "source": "wrist-elbow-care.md",
+    "relevant_docs": [
+      "ad609938-2b6a-4b38-86ca-ef77ca4dedd3",
+      "d7762752-6229-4fab-ae07-a13d9da250a2"
+    ]
+  },
+  {
+    "query": "我练杠铃划船时躯干要前倾到多少度，膝盖微屈就可以吗？",
+    "category": "barbell",
+    "source": "barbell-row-form.md",
+    "relevant_docs": [
+      "0891e43b-920e-44cf-860f-2207dcd09cd9",
+      "64b6684a-b4c1-4963-84b4-fb8aaf7b4f05"
+    ]
+  },
+  {
+    "query": "我练暂停卧推时，胸口停2秒后重量要降到1RM的多少啊？",
+    "category": "bench",
+    "source": "bench-press-scapular-retraction.md",
+    "relevant_docs": [
+      "046d23c8-7c8d-424f-a401-6da5e980739c",
+      "2e50281c-3d7e-4fae-ac37-04a8773c4c31"
+    ]
+  },
+  {
+    "query": "我练大重量深蹲，闭气后一组做几次就得换气呀？",
+    "category": "bracing",
+    "source": "bracing-valsalva.md",
+    "relevant_docs": [
+      "620fda60-0776-4526-9e02-a4ab5efca088",
+      "e0c85385-7570-4d3f-93bd-ecd91f5c08e5"
+    ]
+  },
+  {
+    "query": "我起拉时杠铃老离小腿有点远，是不是得控制在2到3厘米？",
+    "category": "deadlift",
+    "source": "deadlift-setup-guide.md",
+    "relevant_docs": [
+      "5101c518-6aa9-44f5-b541-c01bbe3c5b95",
+      "8c8d17a2-37e5-4384-88e1-0d921dae9868"
+    ]
+  },
+  {
+    "query": "我刚开始练单侧腿，原地箭步蹲每侧做几组几次、哑铃用多重呀？",
+    "category": "dumbbell",
+    "source": "dumbbell-lunge-split-squat.md",
+    "relevant_docs": [
+      "6b4335bc-22f4-4067-b38f-ab87ab8fa554",
+      "f17784d7-2f39-4489-b5ca-c1cedfe2eb9e"
+    ]
+  },
+  {
+    "query": "硬拉后做农夫行走，哑铃拿多重、走多远、做几组合适？",
+    "category": "grip",
+    "source": "grip-strength-training.md",
+    "relevant_docs": [
+      "572cb7f7-7289-4d79-9cc1-80f769be7d1c",
+      "9067d318-248f-4d88-afa2-f9f57544da03"
+    ]
+  },
+  {
+    "query": "上背靠的凳子大概多高，脚离臀部多远？顶端停几秒合适？",
+    "category": "hip",
+    "source": "hip-thrust-guide.md",
+    "relevant_docs": [
+      "49e29659-d797-4a67-925e-9da81b683028",
+      "90b08d96-049d-46a0-a264-9b98ce15a48c"
+    ]
+  },
+  {
+    "query": "我深蹲时膝盖老往里扣，套弹力带深蹲要做几组几次、重量用多少呀？",
+    "category": "knee",
+    "source": "knee-valgus-correction.md",
+    "relevant_docs": [
+      "03719093-9605-4731-b5fb-91ebb61c7b0e",
+      "e030f43a-e0d4-4f8c-b02b-11076a162a26"
+    ]
+  },
+  {
+    "query": "我练站姿推举时，一般做几组几次、选多重、组间歇多久呀？",
+    "category": "overhead",
+    "source": "overhead-press-technique.md",
+    "relevant_docs": [
+      "a26faf60-2742-421f-b4fb-08d36b06d916",
+      "a8c58f37-1980-47d2-88a4-79af9ab22b81"
+    ]
+  },
+  {
+    "query": "深蹲100公斤3组8次，接下来每周怎么加次数和重量？",
+    "category": "progressive",
+    "source": "progressive-overload-methods.md",
+    "relevant_docs": [
+      "70b0ed40-bae8-44be-b393-0562359d9925",
+      "d35676ba-232a-420c-bacc-920ed1cbc10e"
+    ]
+  },
+  {
+    "query": "我是新手一个都做不了，一周练几次、每次做啥和做多少呀？",
+    "category": "pull",
+    "source": "pull-up-from-zero.md",
+    "relevant_docs": [
+      "9bb1b499-df86-4029-bca7-c6abf61c3121",
+      "cf16b2b7-4b58-40ca-91f5-6f983b49d551"
+    ]
+  },
+  {
+    "query": "我练RDL时杠铃下到膝盖下方几厘米就该停？每次都得碰地吗？",
+    "category": "romanian",
+    "source": "romanian-deadlift-hinge.md",
+    "relevant_docs": [
+      "07fc3d41-27be-49c9-b4f1-126808b43d33",
+      "72deeaab-ad3e-4d42-b693-ca094cd696ad"
+    ]
+  },
+  {
+    "query": "我昨晚没睡好，深蹲计划本来是RPE8，重量要降多少？",
+    "category": "rpe",
+    "source": "rpe-rir-training.md",
+    "relevant_docs": [
+      "06b0955e-5537-4916-a027-c0b5a476055c",
+      "e421fa88-4a6b-4f18-a593-59bc2d1f3267"
+    ]
+  },
+  {
+    "query": "我靠墙做无负重下蹲脚跟总离地，先垫高1到2厘米过渡行吗？",
+    "category": "squat",
+    "source": "squat-depth-guide.md",
+    "relevant_docs": [
+      "a1052869-6f15-432f-a56e-546c34a1d32b",
+      "a5b376a9-0e9e-429f-8dad-c24a5ec02ef5"
+    ]
+  },
+  {
+    "query": "我卧推老卡住，想试试3-1-1-0节奏，重量和组次该咋安排？",
+    "category": "tempo",
+    "source": "tempo-eccentric-training.md",
+    "relevant_docs": [
+      "24eb095f-7964-4a3e-aa51-1a4798f0a21b",
+      "9d00d00f-8720-4a86-b0cb-2c0b7911c006"
+    ]
+  }
+]
